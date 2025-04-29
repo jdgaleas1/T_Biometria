@@ -1,0 +1,12 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "voz.exe (voz\\voz.exe)",
+      "name": "voz.exe (voz\\voz.exe)"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+# ninja log v6
+9	2078	7675454726377867	voz/CMakeFiles/voz.dir/voz.cpp.obj	5023fb593f0e53cd
+8	1011	7674890592668330	voz/CMakeFiles/voz.dir/libs.cpp.obj	c04857852fa922d4
+19	1013	7674987583263617	voz/CMakeFiles/voz.dir/preprocessing/vad.cpp.obj	711a06e04f93128c
+2079	2509	7675454746934499	voz/voz.exe	97141ea32a2486db
+25	1009	7674987583321152	voz/CMakeFiles/voz.dir/preprocessing/denoise.cpp.obj	a14e7b91db04a6a7
+35	1058	7674992773117426	voz/CMakeFiles/voz.dir/features/mfcc.cpp.obj	3315495d2c406f06
+36	531	7674994467371954	voz/CMakeFiles/voz.dir/preprocessing/normalize.cpp.obj	dc382426cb3af8e5
+9	2150	7675556666886951	voz/CMakeFiles/voz.dir/voz.cpp.obj	5023fb593f0e53cd
+2152	2588	7675556688332210	voz/voz.exe	7c0b6b177d5045aa

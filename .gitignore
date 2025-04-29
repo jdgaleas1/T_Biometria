@@ -1,0 +1,16 @@
+# Ignorar archivos de Visual Studio
+.vs/
+*.ipch
+*.pdb
+*.obj
+*.exe
+*.dll
+*.obj
+*.log
+*.suo
+*.user
+.vscode/
+
+# Ignorar archivos generados por el sistema operativo
+.DS_Store
+Thumbs.db

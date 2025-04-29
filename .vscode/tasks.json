@@ -2,42 +2,20 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Compilar",
+            "label": "Compilar C++ con MSVC",
             "type": "shell",
-            "command": "g++",
+            "command": "cl.exe", // Comando de compilación de MSVC
             "args": [
-                "-o",
-                "audio_converter.exe",
-                "main.cpp",
-                "-pthread",
-                "-static-libgcc",
-                "-static-libstdc++",
-                "-llame"
-            ],
-            "group": "build"
-        },
-        {
-            "type": "cppbuild",
-            "label": "C/C++: g++.exe compilar archivo activo",
-            "command": "C:\\Strawberry\\c\\bin\\g++.exe",
-            "args": [
-                "-fdiagnostics-color=always",
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
-            ],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": [
-                "$gcc"
+                "/EHsc", // Opciones de compilación para C++
+                "main.cpp", // El archivo fuente que deseas compilar
+                "/Fe:main.exe" // El archivo ejecutable de salida
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Tarea generada por el depurador."
+            "problemMatcher": ["$msCompile"], // Ayuda con los errores de compilación
+            "detail": "Compila el archivo main.cpp con MSVC"
         }
     ]
 }
