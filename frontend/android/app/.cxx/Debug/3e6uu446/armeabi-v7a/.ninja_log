@@ -1,0 +1,7 @@
+# ninja log v5
+1	57	7711336901358693	CMakeFiles/ear_comparator.dir/compare_ear_features.c.o	b05d091a1c68b7ea
+6	67	7711336901358693	CMakeFiles/voice_comparator.dir/compare_voice_features.c.o	4aef5a91ec3c2f4c
+67	152	7711336902367355	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/armeabi-v7a/libvoice_comparator.so	ded62b3f19611226
+58	153	7711336902367355	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/armeabi-v7a/libear_comparator.so	2b6c66d5b9191ce8
+1	88	7711353298657498	CMakeFiles/voice_mfcc.dir/libmfcc.c.o	8bf4a45be7ce0859
+89	168	7711353299586248	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/armeabi-v7a/libvoice_mfcc.so	cb24dff75d8a6077

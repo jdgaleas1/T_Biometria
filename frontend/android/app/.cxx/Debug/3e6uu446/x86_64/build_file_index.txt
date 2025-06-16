@@ -1,0 +1,1 @@
+C:\Users\User\Documents\Tesis\T_Biometria\frontend\android\app\src\main\cpp\CMakeLists.txt

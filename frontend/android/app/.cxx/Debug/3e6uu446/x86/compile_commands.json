@@ -1,0 +1,17 @@
+[
+{
+  "directory": "C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86",
+  "command": "C:\\Users\\User\\AppData\\Local\\Android\\Sdk\\ndk\\23.1.7779620\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android24 --sysroot=C:/Users/User/AppData/Local/Android/Sdk/ndk/23.1.7779620/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dear_comparator_EXPORTS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g  -fno-limit-debug-info -fPIC -o CMakeFiles\\ear_comparator.dir\\compare_ear_features.c.o -c C:\\Users\\User\\Documents\\Tesis\\T_Biometria\\frontend\\android\\app\\src\\main\\cpp\\compare_ear_features.c",
+  "file": "C:\\Users\\User\\Documents\\Tesis\\T_Biometria\\frontend\\android\\app\\src\\main\\cpp\\compare_ear_features.c"
+},
+{
+  "directory": "C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86",
+  "command": "C:\\Users\\User\\AppData\\Local\\Android\\Sdk\\ndk\\23.1.7779620\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android24 --sysroot=C:/Users/User/AppData/Local/Android/Sdk/ndk/23.1.7779620/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dvoice_comparator_EXPORTS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g  -fno-limit-debug-info -fPIC -o CMakeFiles\\voice_comparator.dir\\compare_voice_features.c.o -c C:\\Users\\User\\Documents\\Tesis\\T_Biometria\\frontend\\android\\app\\src\\main\\cpp\\compare_voice_features.c",
+  "file": "C:\\Users\\User\\Documents\\Tesis\\T_Biometria\\frontend\\android\\app\\src\\main\\cpp\\compare_voice_features.c"
+},
+{
+  "directory": "C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86",
+  "command": "C:\\Users\\User\\AppData\\Local\\Android\\Sdk\\ndk\\23.1.7779620\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android24 --sysroot=C:/Users/User/AppData/Local/Android/Sdk/ndk/23.1.7779620/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dvoice_mfcc_EXPORTS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g  -fno-limit-debug-info -fPIC -o CMakeFiles\\voice_mfcc.dir\\libmfcc.c.o -c C:\\Users\\User\\Documents\\Tesis\\T_Biometria\\frontend\\android\\app\\src\\main\\cpp\\libmfcc.c",
+  "file": "C:\\Users\\User\\Documents\\Tesis\\T_Biometria\\frontend\\android\\app\\src\\main\\cpp\\libmfcc.c"
+}
+]

@@ -1,0 +1,5 @@
+C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86_64/CMakeFiles/ear_comparator.dir
+C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86_64/CMakeFiles/voice_comparator.dir
+C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86_64/CMakeFiles/voice_mfcc.dir
+C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86_64/CMakeFiles/rebuild_cache.dir

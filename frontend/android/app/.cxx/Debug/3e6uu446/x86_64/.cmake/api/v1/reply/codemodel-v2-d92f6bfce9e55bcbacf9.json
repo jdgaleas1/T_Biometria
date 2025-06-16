@@ -1,0 +1,78 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.4.1"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Project",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ear_comparator::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ear_comparator-Debug-c7a430a51ccb27d25978.json",
+					"name" : "ear_comparator",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "voice_comparator::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-voice_comparator-Debug-43fb54757c483b83faf9.json",
+					"name" : "voice_comparator",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "voice_mfcc::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-voice_mfcc-Debug-fb378b4cf9fbe7949553.json",
+					"name" : "voice_mfcc",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/.cxx/Debug/3e6uu446/x86_64",
+		"source" : "C:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/src/main/cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}
