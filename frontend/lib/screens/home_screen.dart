@@ -41,28 +41,6 @@ class HomeScreen extends StatelessWidget {
                 _buildOption(context, Icons.person, 'Ver Perfil', () {
                   // ir a perfil
                 }),
-                _buildOption(context, Icons.security, 'Verificar otra vez', () {
-                  List<String> biometricOptions = [
-                    "Voz",
-                    "Oído",
-                    "Iris",
-                    "Rostro",
-                    "Palma"
-                  ];
-                  biometricOptions.shuffle(Random());
-                  List<String> selectedBiometrics =
-                      biometricOptions.take(2).toList();
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BiometricVerification(
-                        email: nombreUsuario,
-                        selected: selectedBiometrics,
-                      ),
-                    ),
-                  );
-                }),
                 _buildOption(context, Icons.settings, 'Configuración', () {
                   // ir a configuración
                 }),

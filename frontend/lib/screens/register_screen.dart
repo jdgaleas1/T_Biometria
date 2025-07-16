@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'voice_register.dart';
-import 'ear_register.dart';
-import 'iris_register.dart';
-import 'face_register.dart';
-import 'palm_register.dart';
+import 'Voz/voice_register.dart';
+import 'Oído/ear_register.dart';
+import 'Iris/iris_register.dart';
+import 'Rostro/face_register.dart';
+import 'Palma/palm_register.dart';
 import 'home_screen.dart';
-import 'login_screen.dart'; // Importa también el LoginScreen
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -17,6 +17,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController apellidoController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+
+  bool camposCompletos = false;
+
+  @override
+  void initState() {
+    super.initState();
+    nombreController.addListener(_validarCampos);
+    apellidoController.addListener(_validarCampos);
+    emailController.addListener(_validarCampos);
+  }
+
+  void _validarCampos() {
+    setState(() {
+      camposCompletos = nombreController.text.isNotEmpty &&
+          apellidoController.text.isNotEmpty &&
+          emailController.text.isNotEmpty;
+    });
+  }
 
   void updateState(int index) {
     setState(() {
@@ -34,184 +52,166 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final icons = [
       Icons.hearing,
       Icons.face,
-      Icons.front_hand, // o pan_tool_alt si prefieres
+      Icons.front_hand,
       Icons.remove_red_eye,
       Icons.record_voice_over,
     ];
     final screens = [
       () => EarRegister(
-            onComplete: () => updateState(0),
-            email: emailController.text, // Pasamos el email aquí ✅
+          onComplete: () => updateState(0), email: emailController.text),
+      () => FaceRegister(
+            onComplete: () => updateState(1),
+            email: emailController.text,
           ),
-      () => FaceRegister(onComplete: () => updateState(1)),
-      () => PalmRegister(onComplete: () => updateState(2)),
-      () => IrisRegister(onComplete: () => updateState(3)),
+      () => PalmRegister(
+          onComplete: () => updateState(2), email: emailController.text),
+      () => IrisRegister(
+          onComplete: () => updateState(3), email: emailController.text),
       () => VoiceRegister(
-            onComplete: () => updateState(4),
-            email: emailController.text, // Pasamos el email aquí ✅
-          ),
+          onComplete: () => updateState(4), email: emailController.text),
     ];
 
     double progress = completado.where((e) => e).length / 5;
 
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 20),
-              Text(
-                'Registrarse',
-                style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
-              ),
-              SizedBox(height: 20),
-              TextField(
-                controller: nombreController,
-                decoration: InputDecoration(
-                  labelText: 'Nombres',
-                  labelStyle: TextStyle(color: Colors.redAccent),
-                  hintText: 'Ingresa tus nombres completos',
-                ),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: apellidoController,
-                decoration: InputDecoration(
-                  labelText: 'Apellidos',
-                  labelStyle: TextStyle(color: Colors.redAccent),
-                  hintText: 'Ingresa tus apellidos completos',
-                ),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  labelStyle: TextStyle(color: Colors.redAccent),
-                  hintText: 'Ingresa tu correo electrónico',
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // Botones de registro biométrico
+              Text('Registro Biométrico',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal[800],
+                      )),
+              const SizedBox(height: 30),
+              _buildInputField(
+                  nombreController, 'Nombres', 'Ingresa tus nombres'),
+              const SizedBox(height: 16),
+              _buildInputField(
+                  apellidoController, 'Apellidos', 'Ingresa tus apellidos'),
+              const SizedBox(height: 16),
+              _buildInputField(
+                  emailController, 'Correo Electrónico', 'ejemplo@correo.com'),
+              const SizedBox(height: 30),
+              Text("Modalidades biométricas",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
               Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: 12,
+                runSpacing: 12,
                 children: List.generate(5, (i) {
                   bool isCompleted = completado[i];
                   return SizedBox(
-                    width: MediaQuery.of(context).size.width / 2 - 30,
-                    child: ElevatedButton(
+                    width: MediaQuery.of(context).size.width / 2 - 28,
+                    child: ElevatedButton.icon(
+                      icon: Icon(icons[i], color: Colors.white),
+                      label: Text(' ${modalities[i]}'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isCompleted ? Colors.grey[400] : Colors.teal[600],
-                        elevation: isCompleted ? 1 : 5,
-                        padding: EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: isCompleted
+                            ? Colors.grey
+                            : camposCompletos
+                                ? Colors.teal
+                                : Colors.grey.shade300,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            icons[i],
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Registrar ${modalities[i]}',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => screens[i]()),
-                        );
-                      },
+                      onPressed: camposCompletos
+                          ? () => Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => screens[i]()))
+                          : null,
                     ),
                   );
                 }),
               ),
-
-              SizedBox(height: 20),
-              // Barra de progreso
+              const SizedBox(height: 30),
               Center(
                 child: Column(
                   children: [
-                    Text('${(progress * 100).toInt()}%',
-                        style: TextStyle(fontSize: 16)),
-                    SizedBox(height: 5),
-                    LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 12,
-                      backgroundColor: Colors.grey[300],
-                      color: Colors.lightGreen,
+                    Text('${(progress * 100).toInt()}% completado',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 12,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+                      ),
                     ),
                   ],
                 ),
               ),
-
-              SizedBox(height: 30),
-              // Botón completar registro
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text('Completar Registro',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  onPressed: (completado.every((e) => e) &&
-                          nombreController.text.isNotEmpty &&
-                          apellidoController.text.isNotEmpty &&
-                          emailController.text.isNotEmpty)
-                      ? () {
-                          guardarRegistroBiometrico();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HomeScreen(
-                                  nombreUsuario: emailController.text),
-                            ),
-                          );
-                        }
-                      : null,
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: (completado.every((e) => e) && camposCompletos)
+                    ? () {
+                        guardarRegistroBiometrico();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                HomeScreen(nombreUsuario: emailController.text),
+                          ),
+                        );
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
+                child: const Text('Completar Registro',
+                    style: TextStyle(fontSize: 16, color: Colors.white)),
               ),
-
-              SizedBox(height: 15),
-              // Link Iniciar sesión
+              const SizedBox(height: 20),
               Center(
                 child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => LoginScreen()),
-                    );
-                  },
-                  child: Text(
-                    '¿Ya tienes una cuenta? Inicia Sesión',
-                    style: TextStyle(
-                        color: Colors.redAccent,
-                        decoration: TextDecoration.underline),
-                  ),
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => LoginScreen())),
+                  child: Text('¿Ya tienes una cuenta? Inicia Sesión',
+                      style: TextStyle(
+                        color: Colors.teal[700],
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline,
+                      )),
                 ),
               ),
-              SizedBox(height: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField(
+      TextEditingController controller, String label, String hint) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white,
+        labelStyle: TextStyle(color: Colors.teal[700]),
+        hintStyle: TextStyle(color: Colors.grey),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.teal.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.teal, width: 2),
         ),
       ),
     );

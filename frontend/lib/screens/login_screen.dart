@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'biometric_verification.dart';
-import 'register_screen.dart'; // para el link de Registrarse
+import 'register_screen.dart';
+import 'biometric_db_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,11 +14,18 @@ class _LoginScreenState extends State<LoginScreen> {
   List<String> biometricOptions = ["Voz", "Oído", "Iris", "Rostro", "Palma"];
   List<String> selectedBiometrics = [];
 
-  void iniciarVerificacion() {
-    if (emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Por favor ingresa tu correo electrónico")),
-      );
+  void iniciarVerificacion() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      _showSnack("Por favor ingresa tu correo electrónico");
+      return;
+    }
+
+    final existe = await BiometricDBHelper().existeUsuario(email);
+
+    if (!existe) {
+      _showSnack("❌ Correo no registrado. Por favor regístrate primero.");
       return;
     }
 
@@ -28,38 +36,41 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => BiometricVerification(
-          email: emailController.text,
+          email: email,
           selected: selectedBiometrics,
         ),
       ),
     );
   }
 
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icono nube
-              Icon(Icons.cloud, size: 80, color: Colors.grey[400]),
-              SizedBox(height: 10),
-
-              // Texto Biometría Multimodal
+              Icon(Icons.verified_user_rounded,
+                  size: 80, color: Colors.teal[300]),
+              const SizedBox(height: 12),
               Text(
                 'Biometría Multimodal',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
                   color: Colors.grey[600],
                 ),
               ),
-              SizedBox(height: 50),
-
-              // Titulo Inicio de Sesión
+              const SizedBox(height: 50),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -67,57 +78,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Colors.teal[800],
                   ),
                 ),
               ),
-              SizedBox(height: 20),
-
-              // Campo Correo Electrónico
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  labelStyle: TextStyle(color: Colors.redAccent),
-                  hintText: 'example@email.com',
-                ),
-              ),
-              SizedBox(height: 30),
-
-              // Botón iniciar verificación biométrica
+              const SizedBox(height: 20),
+              _buildInputField(
+                  emailController, 'Correo Electrónico', 'ejemplo@correo.com'),
+              const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.login, color: Colors.white),
+                  label: Text('Iniciar verificación biométrica'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.teal,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   onPressed: iniciarVerificacion,
-                  child: Text(
-                    'Iniciar verificación biométrica',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
                 ),
               ),
-
-              SizedBox(height: 40),
-
-              // Link Registrarse
+              const SizedBox(height: 40),
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => RegisterScreen()),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => RegisterScreen()),
+                ),
                 child: Text(
-                  'Registrarse',
+                  '¿No tienes cuenta? Registrarse',
                   style: TextStyle(
-                    color: Colors.redAccent,
+                    color: Colors.teal[700],
                     decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -125,6 +120,32 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInputField(
+      TextEditingController controller, String label, String hint) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white,
+        labelStyle: TextStyle(color: Colors.teal[700]),
+        hintStyle: TextStyle(color: Colors.grey),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.teal.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.teal, width: 2),
+        ),
+      ),
+      keyboardType: TextInputType.emailAddress,
     );
   }
 }

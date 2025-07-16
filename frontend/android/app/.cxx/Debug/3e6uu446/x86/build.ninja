@@ -128,6 +128,20 @@ build CMakeFiles/voice_mfcc.dir/libmfcc.c.o: C_COMPILER__voice_mfcc_Debug C$:/Us
   OBJECT_DIR = CMakeFiles\voice_mfcc.dir
   OBJECT_FILE_DIR = CMakeFiles\voice_mfcc.dir
 
+build CMakeFiles/voice_mfcc.dir/mfcc.c.o: C_COMPILER__voice_mfcc_Debug C$:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/src/main/cpp/mfcc.c || cmake_object_order_depends_target_voice_mfcc
+  DEFINES = -Dvoice_mfcc_EXPORTS
+  DEP_FILE = CMakeFiles\voice_mfcc.dir\mfcc.c.o.d
+  FLAGS = -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g  -fno-limit-debug-info -fPIC
+  OBJECT_DIR = CMakeFiles\voice_mfcc.dir
+  OBJECT_FILE_DIR = CMakeFiles\voice_mfcc.dir
+
+build CMakeFiles/voice_mfcc.dir/extract_mfcc.c.o: C_COMPILER__voice_mfcc_Debug C$:/Users/User/Documents/Tesis/T_Biometria/frontend/android/app/src/main/cpp/extract_mfcc.c || cmake_object_order_depends_target_voice_mfcc
+  DEFINES = -Dvoice_mfcc_EXPORTS
+  DEP_FILE = CMakeFiles\voice_mfcc.dir\extract_mfcc.c.o.d
+  FLAGS = -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g  -fno-limit-debug-info -fPIC
+  OBJECT_DIR = CMakeFiles\voice_mfcc.dir
+  OBJECT_FILE_DIR = CMakeFiles\voice_mfcc.dir
+
 
 # =============================================================================
 # Link build statements for SHARED_LIBRARY target voice_mfcc
@@ -136,7 +150,7 @@ build CMakeFiles/voice_mfcc.dir/libmfcc.c.o: C_COMPILER__voice_mfcc_Debug C$:/Us
 #############################################
 # Link the shared library C:\Users\User\Documents\Tesis\T_Biometria\frontend\build\app\intermediates\cxx\Debug\3e6uu446\obj\x86\libvoice_mfcc.so
 
-build C$:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86/libvoice_mfcc.so: C_SHARED_LIBRARY_LINKER__voice_mfcc_Debug CMakeFiles/voice_mfcc.dir/libmfcc.c.o | C$:/Users/User/AppData/Local/Android/Sdk/ndk/23.1.7779620/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/i686-linux-android/24/liblog.so
+build C$:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86/libvoice_mfcc.so: C_SHARED_LIBRARY_LINKER__voice_mfcc_Debug CMakeFiles/voice_mfcc.dir/libmfcc.c.o CMakeFiles/voice_mfcc.dir/mfcc.c.o CMakeFiles/voice_mfcc.dir/extract_mfcc.c.o | C$:/Users/User/AppData/Local/Android/Sdk/ndk/23.1.7779620/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/i686-linux-android/24/liblog.so
   LANGUAGE_COMPILE_FLAGS = -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g  -fno-limit-debug-info
   LINK_FLAGS = -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--fatal-warnings -Qunused-arguments -Wl,--no-undefined
   LINK_LIBRARIES = C:/Users/User/AppData/Local/Android/Sdk/ndk/23.1.7779620/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/i686-linux-android/24/liblog.so   -latomic -lm

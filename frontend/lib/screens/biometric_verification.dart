@@ -2,27 +2,74 @@ import 'dart:math';
 import 'dart:ffi' as ffi;
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'ear_register.dart';
-import 'voice_register.dart';
-import 'iris_register.dart';
-import 'face_register.dart';
-import 'palm_register.dart';
+import 'Oído/ear_register.dart';
+import 'Voz/voice_register.dart';
+import 'Iris/iris_register.dart';
+import 'Rostro/face_register.dart';
+import 'Palma/palm_register.dart';
 import 'home_screen.dart';
-import 'ear_comparator_ffi.dart';
-import 'voice_comparator_ffi.dart'; // <--- IMPORTANTE: para verificar voz
-import 'biometric_db_helper.dart'; // <--- IMPORTANTE: usa SQLite
+import 'Voz/voice_comparator_ffi.dart';
+import 'biometric_db_helper.dart';
+import 'Rostro/face_verify.dart';
+import 'Palma/palm_verify.dart';
+import 'Iris/iris_verify.dart';
 
 class BiometricVerification extends StatefulWidget {
   final String email;
   final List<String> selected;
 
-  BiometricVerification({
+  const BiometricVerification({
+    super.key,
     required this.email,
     required this.selected,
   });
 
   @override
   _BiometricVerificationState createState() => _BiometricVerificationState();
+
+  // Mover las funciones aquí
+  Future<bool> verificarOido(
+      List<double> storedFeatures, List<double> currentFeatures) async {
+    final length = storedFeatures.length;
+
+    double sumaCuadrados = 0.0;
+
+    for (int i = 0; i < length; i++) {
+      sumaCuadrados += (storedFeatures[i] - currentFeatures[i]) *
+          (storedFeatures[i] - currentFeatures[i]);
+    }
+
+    final distance = sqrt(sumaCuadrados);
+
+    print('Distancia Euclidiana (similaridad oído): $distance');
+
+    const threshold = 0.8;
+    return distance <= threshold;
+  }
+
+  Future<bool> verificarVoz(
+      List<double> storedFeatures, List<double> currentFeatures) async {
+    final length = storedFeatures.length;
+
+    final storedPtr = calloc<ffi.Double>(length);
+    final currentPtr = calloc<ffi.Double>(length);
+
+    for (int i = 0; i < length; i++) {
+      storedPtr[i] = storedFeatures[i];
+      currentPtr[i] = currentFeatures[i];
+    }
+
+    final similarity =
+        VoiceComparatorFFI.compareVoiceFeatures(storedPtr, currentPtr, length);
+
+    calloc.free(storedPtr);
+    calloc.free(currentPtr);
+
+    print('Similarity voz: $similarity');
+
+    const threshold = 0.8;
+    return similarity >= threshold;
+  }
 }
 
 class _BiometricVerificationState extends State<BiometricVerification> {
@@ -58,7 +105,8 @@ class _BiometricVerificationState extends State<BiometricVerification> {
               List<double> storedFeatures =
                   await BiometricDBHelper().getTemplate(widget.email, 'voice');
 
-              bool match = await verificarVoz(storedFeatures, currentFeatures);
+              bool match =
+                  await widget.verificarVoz(storedFeatures, currentFeatures);
 
               if (match) {
                 print("✅ Voz verificada con éxito.");
@@ -66,18 +114,19 @@ class _BiometricVerificationState extends State<BiometricVerification> {
               } else {
                 print("❌ Voz no coincide.");
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Verificación de Voz fallida")),
+                  const SnackBar(content: Text("Verificación de Voz fallida")),
                 );
               }
             } catch (e) {
               print("❌ Error cargando features de Voz: $e");
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Error cargando features de Voz")),
+                const SnackBar(content: Text("Error cargando features de Voz")),
               );
             }
           },
         );
         break;
+
       case "Oído":
         screen = EarRegister(
           isVerification: true,
@@ -86,7 +135,8 @@ class _BiometricVerificationState extends State<BiometricVerification> {
               List<double> storedFeatures =
                   await BiometricDBHelper().getTemplate(widget.email, 'ear');
 
-              bool match = await verificarOido(storedFeatures, currentFeatures);
+              bool match =
+                  await widget.verificarOido(storedFeatures, currentFeatures);
 
               if (match) {
                 print("✅ Oído verificado con éxito.");
@@ -94,27 +144,49 @@ class _BiometricVerificationState extends State<BiometricVerification> {
               } else {
                 print("❌ Oído no coincide.");
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Verificación de Oído fallida")),
+                  const SnackBar(content: Text("Verificación de Oído fallida")),
                 );
               }
             } catch (e) {
               print("❌ Error cargando features de Oído: $e");
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Error cargando features de Oído")),
+                const SnackBar(
+                    content: Text("Error cargando features de Oído")),
               );
             }
           },
         );
         break;
+
       case "Iris":
-        screen = IrisRegister(onComplete: markCompleted);
+        screen = IrisVerify(
+          email: widget.email,
+          onSuccess: () {
+            print("✅ Iris verificado con éxito.");
+            markCompleted();
+          },
+        );
         break;
       case "Rostro":
-        screen = FaceRegister(onComplete: markCompleted);
+        screen = FaceVerify(
+          email: widget.email,
+          onSuccess: () {
+            print("✅ Rostro verificado con éxito.");
+            markCompleted();
+          },
+        );
         break;
+
       case "Palma":
-        screen = PalmRegister(onComplete: markCompleted);
+        screen = PalmVerify(
+          email: widget.email,
+          onSuccess: () {
+            print("✅ Palma verificada con éxito.");
+            markCompleted();
+          },
+        );
         break;
+
       default:
         throw Exception("Modalidad no soportada: $option");
     }
@@ -125,68 +197,20 @@ class _BiometricVerificationState extends State<BiometricVerification> {
     );
   }
 
-  Future<bool> verificarOido(
-      List<double> storedFeatures, List<double> currentFeatures) async {
-    final length = storedFeatures.length;
-
-    final storedPtr = calloc<ffi.Double>(length);
-    final currentPtr = calloc<ffi.Double>(length);
-
-    for (int i = 0; i < length; i++) {
-      storedPtr[i] = storedFeatures[i];
-      currentPtr[i] = currentFeatures[i];
-    }
-
-    final similarity =
-        EarComparatorFFI.compareEarFeatures(storedPtr, currentPtr, length);
-
-    calloc.free(storedPtr);
-    calloc.free(currentPtr);
-
-    print('Similarity oído: $similarity');
-
-    const threshold = 0.8;
-    return similarity >= threshold;
-  }
-
-  Future<bool> verificarVoz(
-      List<double> storedFeatures, List<double> currentFeatures) async {
-    final length = storedFeatures.length;
-
-    final storedPtr = calloc<ffi.Double>(length);
-    final currentPtr = calloc<ffi.Double>(length);
-
-    for (int i = 0; i < length; i++) {
-      storedPtr[i] = storedFeatures[i];
-      currentPtr[i] = currentFeatures[i];
-    }
-
-    final similarity =
-        VoiceComparatorFFI.compareVoiceFeatures(storedPtr, currentPtr, length);
-
-    calloc.free(storedPtr);
-    calloc.free(currentPtr);
-
-    print('Similarity voz: $similarity');
-
-    const threshold = 0.8;
-    return similarity >= threshold;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Verificación Biométrica')),
+      appBar: AppBar(title: const Text('Verificación Biométrica')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             Text(
               'Correo: ${widget.email}',
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 10),
-            Text(
+            const SizedBox(height: 10),
+            const Text(
               'Verifica tu identidad usando:',
               style: TextStyle(fontSize: 18),
             ),

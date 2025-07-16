@@ -4,11 +4,11 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/biometric_verification.dart';
-import 'screens/voice_register.dart';
-import 'screens/ear_register.dart';
-import 'screens/iris_register.dart';
-import 'screens/palm_register.dart';
-import 'screens/face_register.dart';
+import 'screens/Voz/voice_register.dart';
+import 'screens/Oído/ear_register.dart';
+import 'screens/Iris/iris_register.dart';
+import 'screens/Palma/palm_register.dart';
+import 'screens/Rostro/face_register.dart';
 import 'package:camera/camera.dart';
 
 void main() {
@@ -27,13 +27,11 @@ class BiometriaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/splash',
       routes: {
-        '/': (context) => HomeScreen(), // ✅ esta línea es clave
+        '/': (context) => HomeScreen(),
         '/login': (context) => LoginScreen(),
         '/splash': (context) => SplashScreen(),
         '/register': (context) => RegisterScreen(),
         '/home': (context) => HomeScreen(),
-        '/iris_register': (context) => IrisRegister(onComplete: () {}),
-        '/palm_register': (context) => PalmRegister(onComplete: () {}),
       },
     );
   }

@@ -20,6 +20,7 @@ class BiometricDBHelper {
   Future<Database> _initDB() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'biometric_templates.db');
+    print('📂 DB Path: $path');
 
     return await openDatabase(
       path,
@@ -84,5 +85,16 @@ class BiometricDBHelper {
     final db = await database;
     await db.execute('DROP TABLE IF EXISTS biometric_templates');
     print("🗑️ Dropped entire biometric_templates table");
+  }
+
+  Future<bool> existeUsuario(String email) async {
+    final db = await database;
+    final result = await db.query(
+      'biometric_templates',
+      where: 'email = ?',
+      whereArgs: [email],
+      limit: 1,
+    );
+    return result.isNotEmpty;
   }
 }

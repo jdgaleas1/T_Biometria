@@ -17,6 +17,8 @@ add_library(
         voice_mfcc
         SHARED
         libmfcc.c
+        mfcc.c
+        extract_mfcc.c
 )
 
 find_library(
