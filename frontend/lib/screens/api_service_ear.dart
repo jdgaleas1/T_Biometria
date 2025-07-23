@@ -13,6 +13,7 @@ Future<void> verificarOidoHibrido({
   required Function(bool match, double similitud) onResultado,
 }) async {
   final connectivityResult = await Connectivity().checkConnectivity();
+  bool enviadoRemotamente = false;
 
   if (connectivityResult != ConnectivityResult.none) {
     try {
@@ -32,8 +33,8 @@ Future<void> verificarOidoHibrido({
 
       if (response.statusCode == 200) {
         print('🌐 [Remoto] Registro enviado correctamente');
-        onResultado(true, 1.0); // Simulamos similitud máxima
-        return;
+        enviadoRemotamente = true;
+        onResultado(true, 1.0); // Similitud máxima (simulada)
       } else {
         print('⚠️ Fallo remoto: ${response.statusCode}');
       }
@@ -42,27 +43,37 @@ Future<void> verificarOidoHibrido({
     }
   }
 
-  // Si no hay internet o falla el backend
-  try {
-    final templateLocal = await BiometricDBHelper().getTemplate(email, 'ear');
+  if (!enviadoRemotamente) {
+    // 💾 Guardamos el template localmente si no fue posible enviarlo
+    try {
+      await BiometricDBHelper().insertTemplate(email, 'ear', features);
+      print('📥 [Local] Template oído guardado en BD local');
+    } catch (e) {
+      print('❌ No se pudo guardar localmente: $e');
+    }
 
-    if (templateLocal == null) {
-      print('❌ No se encontró plantilla local para $email');
+    // También intentamos comparar localmente (verificación híbrida)
+    try {
+      final templateLocal = await BiometricDBHelper().getTemplate(email, 'ear');
+
+      if (templateLocal == null) {
+        print('❌ No se encontró plantilla local para $email');
+        onResultado(false, 0.0);
+        return;
+      }
+
+      double similitud = 0.0;
+      for (int i = 0; i < features.length; i++) {
+        similitud += 1 - ((features[i] - templateLocal[i]).abs());
+      }
+      similitud /= features.length;
+
+      final match = similitud >= 0.85;
+      print('📦 [Local] Similitud calculada: $similitud');
+      onResultado(match, similitud);
+    } catch (e) {
+      print('❌ Error en comparación local: $e');
       onResultado(false, 0.0);
-      return;
     }
-
-    double similitud = 0.0;
-    for (int i = 0; i < features.length; i++) {
-      similitud += 1 - ((features[i] - templateLocal[i]).abs());
-    }
-    similitud /= features.length;
-
-    final match = similitud >= 0.85;
-    print('📦 [Local] Similitud calculada: $similitud');
-    onResultado(match, similitud);
-  } catch (e) {
-    print('❌ Error en comparación local: $e');
-    onResultado(false, 0.0);
   }
 }

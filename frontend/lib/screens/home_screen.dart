@@ -1,20 +1,21 @@
+// ✅ HomeScreen mejorado con datos del usuario desde la BD
 import 'package:flutter/material.dart';
-import 'dart:math';
-import 'biometric_verification.dart';
+import 'biometric_db_helper.dart';
 
 class HomeScreen extends StatelessWidget {
-  final String nombreUsuario;
+  final String nombreUsuario; // este es el email
 
-  HomeScreen({this.nombreUsuario = "Usuario"});
+  const HomeScreen({super.key, required this.nombreUsuario});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Panel Principal'),
+        title: const Text('Panel Principal'),
+        backgroundColor: Colors.teal,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () {
               Navigator.pushNamedAndRemoveUntil(
                   context, '/login', (_) => false);
@@ -22,55 +23,48 @@ class HomeScreen extends StatelessWidget {
           )
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¡Bienvenido, $nombreUsuario!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Divider(height: 40),
-            Text('¿Qué deseas hacer hoy?', style: TextStyle(fontSize: 18)),
-            SizedBox(height: 20),
-            Wrap(
-              spacing: 20,
-              runSpacing: 20,
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: BiometricDBHelper().obtenerPerfil(nombreUsuario),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final user = snapshot.data!;
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildOption(context, Icons.person, 'Ver Perfil', () {
-                  // ir a perfil
-                }),
-                _buildOption(context, Icons.settings, 'Configuración', () {
-                  // ir a configuración
+                Text('Hola, ${user['nombres']} ${user['apellidos']}',
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('📧 ${user['email']}'),
+                Text('🌍 País: ${user['pais']}'),
+                const SizedBox(height: 30),
+                const Divider(),
+                const SizedBox(height: 10),
+                Text('🔒 Biometrías registradas:',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 10),
+                ...List.generate(user['modalidades'].length, (i) {
+                  final modalidad = user['modalidades'][i];
+                  return Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: Colors.teal, size: 20),
+                      const SizedBox(width: 8),
+                      Text(modalidad)
+                    ],
+                  );
                 }),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOption(
-      BuildContext context, IconData icon, String title, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 140,
-        height: 120,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.deepPurple),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Colors.deepPurple),
-            SizedBox(height: 10),
-            Text(title, textAlign: TextAlign.center),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

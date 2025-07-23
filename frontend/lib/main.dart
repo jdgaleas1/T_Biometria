@@ -10,8 +10,11 @@ import 'screens/Iris/iris_register.dart';
 import 'screens/Palma/palm_register.dart';
 import 'screens/Rostro/face_register.dart';
 import 'package:camera/camera.dart';
+import 'screens/biometric_db_helper.dart';
 
-void main() {
+void main() async {
+  //WidgetsFlutterBinding.ensureInitialized();
+  //await BiometricDBHelper().dropTables();
   runApp(BiometriaApp());
 }
 
@@ -27,11 +30,9 @@ class BiometriaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/splash',
       routes: {
-        '/': (context) => HomeScreen(),
         '/login': (context) => LoginScreen(),
         '/splash': (context) => SplashScreen(),
         '/register': (context) => RegisterScreen(),
-        '/home': (context) => HomeScreen(),
       },
     );
   }

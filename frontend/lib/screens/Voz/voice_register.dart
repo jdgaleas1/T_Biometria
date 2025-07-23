@@ -3,6 +3,12 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:math';
+import '../api_service_voice.dart';
+import '../biometric_db_helper.dart';
+import 'dart:ffi' as ffi;
+import 'dart:ffi';
+import 'dart:io';
+import 'package:ffi/ffi.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
@@ -10,9 +16,41 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../api_service.dart';
-import '../biometric_db_helper.dart';
-import 'voice_mfcc_ffi.dart';
+typedef ComputeVoiceMfccNative = ffi.Pointer<ffi.Double> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<ffi.Int32>);
+typedef ComputeVoiceMfccDart = Pointer<Double> Function(
+    Pointer<Utf8>, Pointer<ffi.Int32>);
+typedef FreeMfccNative = ffi.Void Function(ffi.Pointer<ffi.Double>);
+typedef FreeMfccDart = void Function(ffi.Pointer<ffi.Double>);
+
+class VoiceNative {
+  static final _lib = Platform.isAndroid
+      ? ffi.DynamicLibrary.open("libvoice_mfcc.so")
+      : ffi.DynamicLibrary.process();
+
+  static final ComputeVoiceMfccDart computeVoiceMfcc = _lib
+      .lookup<ffi.NativeFunction<ComputeVoiceMfccNative>>('compute_voice_mfcc')
+      .asFunction();
+
+  static final FreeMfccDart freeMfcc =
+      _lib.lookup<ffi.NativeFunction<FreeMfccNative>>('free_mfcc').asFunction();
+
+  static List<double> extractMfcc(String filePath) {
+    final pathPtr = filePath.toNativeUtf8();
+    final numCoefficientsPtr = calloc<ffi.Int32>();
+
+    final mfccPtr = computeVoiceMfcc(pathPtr, numCoefficientsPtr);
+    final numCoefficients = numCoefficientsPtr.value;
+    final mfccList = List<double>.generate(
+        numCoefficients, (i) => mfccPtr.elementAt(i).value);
+
+    freeMfcc(mfccPtr);
+    calloc.free(pathPtr);
+    calloc.free(numCoefficientsPtr);
+
+    return mfccList;
+  }
+}
 
 class VoiceRegister extends StatefulWidget {
   final bool isVerification;
@@ -213,16 +251,57 @@ class _VoiceRegisterState extends State<VoiceRegister> {
         },
       );
     } else {
-      await enviarVoz(
-        archivo,
-        email,
-        onResultado: (bool match, double similitud) {
+      bool enviado = false;
+
+      if (_tieneInternet) {
+        final completer = Completer<bool>();
+
+        try {
+          await enviarVoz(
+            archivo,
+            email,
+            onResultado: (bool match, double similitud) async {
+              print('🛰️ Resultado recibido del backend');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('✅ Registro exitoso ($similitud)')),
+              );
+              enviado = true;
+              widget.onComplete?.call();
+              completer.complete(true);
+            },
+          );
+
+          // Esperamos resultado o timeout
+          await completer.future.timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              print('⚠️ Backend no respondió a tiempo');
+              completer.complete(false); // desbloquear
+              return false;
+            },
+          );
+        } catch (e) {
+          print('❌ Excepción al enviar al backend: $e');
+          enviado = false;
+        }
+      }
+
+      if (!enviado) {
+        print('📥 Guardando localmente porque no se pudo enviar');
+        try {
+          final List<double> mfcc = VoiceNative.extractMfcc(_audioPath!);
+          await BiometricDBHelper().insertTemplate(email, 'voice', mfcc);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('✅ Registro exitoso ($similitud)')),
+            const SnackBar(content: Text('📥 Guardado localmente')),
           );
           widget.onComplete?.call();
-        },
-      );
+        } catch (e) {
+          print('❌ Error guardando localmente: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error procesando MFCC')),
+          );
+        }
+      }
     }
   }
 
@@ -240,72 +319,170 @@ class _VoiceRegisterState extends State<VoiceRegister> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro de Voz')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (widget.email == null)
-              TextField(
-                controller: _emailController,
-                decoration:
-                    const InputDecoration(labelText: 'Correo electrónico'),
-              ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-              label: Text(_isRecording ? 'Detener' : 'Grabar Voz'),
-              onPressed: _isRecording ? _stopRecording : _startRecording,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isRecording ? Colors.red : Colors.green,
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (_tieneInternet)
-              ElevatedButton.icon(
-                icon: const Icon(Icons.cloud_upload),
-                label: Text(widget.isVerification
-                    ? 'Verificar Voz (Online)'
-                    : 'Registrar y enviar (Online)'),
-                onPressed: _enviarGrabacion,
-              )
-            else if (!widget.isVerification)
-              ElevatedButton.icon(
-                icon: const Icon(Icons.save_alt),
-                label: const Text('Guardar MFCC (Offline)'),
-                onPressed: () async {
-                  if (_audioPath == null || email.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Falta grabación o correo')),
-                    );
-                    return;
-                  }
+      appBar: AppBar(
+        title: const Text('🎤 Registro de Voz'),
+        centerTitle: true,
+        backgroundColor: Colors.deepPurple,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+                maxWidth: 400), // opcional para que no se vea tan extendido
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (widget.email == null)
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: TextField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Correo electrónico',
+                          prefixIcon: Icon(Icons.email),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Card(
+                  color: Colors.grey.shade100,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          _isRecording
+                              ? '🎙️ Grabando...'
+                              : 'Presiona para grabar tu voz',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: Icon(
+                              _isRecording ? Icons.stop_circle : Icons.mic),
+                          label: Text(_isRecording
+                              ? 'Detener grabación'
+                              : 'Iniciar grabación'),
+                          onPressed:
+                              _isRecording ? _stopRecording : _startRecording,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _isRecording ? Colors.redAccent : Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 20),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Card(
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          '📤 Guardar',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_tieneInternet)
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.cloud_upload),
+                            label: Text(widget.isVerification
+                                ? 'Verificar Voz'
+                                : 'Guardar grabación'),
+                            onPressed: _enviarGrabacion,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14, horizontal: 20),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          )
+                        else if (!widget.isVerification)
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.save_alt),
+                            label: const Text('Guardar grabación'),
+                            onPressed: () async {
+                              if (_audioPath == null || email.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text('Falta grabación o correo')),
+                                );
+                                return;
+                              }
 
-                  try {
-                    final List<double> mfcc =
-                        await VoiceMfccFFI.extractMfcc(_audioPath!);
-                    await BiometricDBHelper()
-                        .insertTemplate(email, 'voice', mfcc);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('✅ MFCC guardado localmente')),
-                    );
-                    widget.onComplete?.call();
-                  } catch (e) {
-                    print('❌ Error MFCC: $e');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('❌ Error extrayendo MFCC')),
-                    );
-                  }
-                },
-              ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('Reproducir grabación'),
-              onPressed: _reproducirGrabacion,
+                              try {
+                                final List<double> mfcc =
+                                    VoiceNative.extractMfcc(_audioPath!);
+                                await BiometricDBHelper()
+                                    .insertTemplate(email, 'voice', mfcc);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          '✅ Audio guardado correctamente')),
+                                );
+                                widget.onComplete?.call();
+                              } catch (e) {
+                                print('❌ Error MFCC: $e');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text('❌ Error extrayendo audio')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14, horizontal: 20),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Reproducir Grabación'),
+                  onPressed: _reproducirGrabacion,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 171, 89, 238),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

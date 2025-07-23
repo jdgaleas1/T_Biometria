@@ -6,6 +6,7 @@ import 'Rostro/face_register.dart';
 import 'Palma/palm_register.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import 'biometric_db_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -14,9 +15,11 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final List<bool> completado = [false, false, false, false, false];
+
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController apellidoController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController paisController = TextEditingController();
 
   bool camposCompletos = false;
 
@@ -26,13 +29,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     nombreController.addListener(_validarCampos);
     apellidoController.addListener(_validarCampos);
     emailController.addListener(_validarCampos);
+    paisController.addListener(_validarCampos);
   }
 
   void _validarCampos() {
     setState(() {
       camposCompletos = nombreController.text.isNotEmpty &&
           apellidoController.text.isNotEmpty &&
-          emailController.text.isNotEmpty;
+          emailController.text.isNotEmpty &&
+          paisController.text.isNotEmpty;
     });
   }
 
@@ -42,8 +47,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  void guardarRegistroBiometrico() {
-    print("✅ Registro completado para: ${emailController.text}");
+  Future<void> guardarRegistroBiometrico() async {
+    await BiometricDBHelper().insertarUsuarioCompleto(
+      email: emailController.text,
+      nombres: nombreController.text,
+      apellidos: apellidoController.text,
+      pais: paisController.text,
+      templates: {}, // Aquí luego puedes pasar los vectores biométricos reales
+    );
+  }
+
+  @override
+  void dispose() {
+    nombreController.dispose();
+    apellidoController.dispose();
+    emailController.dispose();
+    paisController.dispose();
+    super.dispose();
   }
 
   @override
@@ -60,9 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       () => EarRegister(
           onComplete: () => updateState(0), email: emailController.text),
       () => FaceRegister(
-            onComplete: () => updateState(1),
-            email: emailController.text,
-          ),
+          onComplete: () => updateState(1), email: emailController.text),
       () => PalmRegister(
           onComplete: () => updateState(2), email: emailController.text),
       () => IrisRegister(
@@ -79,8 +97,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 30.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Icon(Icons.verified_user_rounded,
+                  size: 80, color: Colors.teal[300]),
+              const SizedBox(height: 12),
+              Text(
+                'Biometría Multimodal',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 50),
               Text('Registro Biométrico',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
@@ -95,6 +125,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 16),
               _buildInputField(
                   emailController, 'Correo Electrónico', 'ejemplo@correo.com'),
+              const SizedBox(height: 16),
+              _buildInputField(paisController, 'País', 'Ej. Ecuador'),
               const SizedBox(height: 30),
               Text("Modalidades biométricas",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -152,8 +184,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 30),
               ElevatedButton(
                 onPressed: (completado.every((e) => e) && camposCompletos)
-                    ? () {
-                        guardarRegistroBiometrico();
+                    ? () async {
+                        await guardarRegistroBiometrico();
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
@@ -175,14 +207,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 20),
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => LoginScreen())),
-                  child: Text('¿Ya tienes una cuenta? Inicia Sesión',
-                      style: TextStyle(
-                        color: Colors.teal[700],
-                        fontWeight: FontWeight.w500,
-                        decoration: TextDecoration.underline,
-                      )),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginScreen()),
+                  ),
+                  child: Text(
+                    '¿Ya tienes una cuenta? Inicia Sesión',
+                    style: TextStyle(
+                      color: Colors.teal[700],
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -202,8 +238,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filled: true,
         fillColor: Colors.white,
         labelStyle: TextStyle(color: Colors.teal[700]),
-        hintStyle: TextStyle(color: Colors.grey),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: const TextStyle(color: Colors.grey),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -211,7 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.teal, width: 2),
+          borderSide: const BorderSide(color: Colors.teal, width: 2),
         ),
       ),
     );

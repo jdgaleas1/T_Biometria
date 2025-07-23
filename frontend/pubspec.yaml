@@ -51,10 +51,16 @@ dependencies:
   http_parser: ^4.0.2
   connectivity_plus: ^6.1.4
   mockito: ^5.4.4
+  rename: ^3.1.0
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icons/logo_biometria.png
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -76,6 +82,8 @@ flutter:
 
   assets:
     - assets/models/mobilefacenet.tflite
+    - assets/models/modelo_oreja.tflite
+    - assets/images/logo_biometria.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

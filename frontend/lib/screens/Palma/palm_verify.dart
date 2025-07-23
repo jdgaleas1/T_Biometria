@@ -48,10 +48,12 @@ class _PalmVerifyState extends State<PalmVerify> {
     setState(() {
       _verificando = false;
       if (promedio >= 0.85) {
-        _resultado = '✅ Palma verificada (similaridad: ${promedio.toStringAsFixed(3)})';
+        _resultado =
+            '✅ Palma verificada\nSimilaridad: ${(promedio * 100).toStringAsFixed(2)}%';
         widget.onSuccess();
       } else {
-        _resultado = '❌ Palma no coincide (similaridad: ${promedio.toStringAsFixed(3)})';
+        _resultado =
+            '❌ Palma no coincide\nSimilaridad: ${(promedio * 100).toStringAsFixed(2)}%';
       }
     });
   }
@@ -69,28 +71,72 @@ class _PalmVerifyState extends State<PalmVerify> {
       }
     }
     final maxDiff = 128.0 * 128.0 * 255.0;
-    return 1.0 - (suma / maxDiff); // entre 0.0 y 1.0
+    return 1.0 - (suma / maxDiff);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Verificar Palma')),
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text('🖐️ Verificación de Palma'),
+        centerTitle: true,
+        backgroundColor: Colors.deepPurple,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Presiona para capturar una nueva foto de tu palma"),
+            const Icon(Icons.pan_tool_alt_outlined,
+                size: 80, color: Colors.deepPurple),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: Icon(Icons.pan_tool),
-              label: Text("Verificar Palma"),
-              onPressed: _verificando ? null : _verificar,
+            const Text(
+              "Captura una nueva foto de tu palma para comparar con las imágenes registradas",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.black87),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.camera_alt),
+              label: const Text("Verificar Palma"),
+              onPressed: _verificando ? null : _verificar,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 18, 25, 121),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 28),
+                textStyle:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            if (_verificando) const CircularProgressIndicator(),
             if (_resultado.isNotEmpty)
-              Text(_resultado, style: TextStyle(fontSize: 16)),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _resultado.startsWith('✅')
+                      ? Colors.green[100]
+                      : Colors.red[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _resultado,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: _resultado.startsWith('✅')
+                        ? Colors.green[900]
+                        : Colors.red[900],
+                  ),
+                ),
+              ),
           ],
         ),
       ),

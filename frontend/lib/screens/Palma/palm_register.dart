@@ -35,14 +35,16 @@ class _PalmRegisterState extends State<PalmRegister> {
       });
 
       if (_photoCount == _maxPhotos) {
-        // Simulamos que extraemos características (más adelante podrás aplicar procesamiento real)
         await BiometricDBHelper().insertTemplate(
           widget.email,
           'palm',
-          List.filled(128, 0.0), // Simulación de vector de características
+          List.filled(128, 0.0), // Simulación de vector
         );
 
-        print('✅ Registro de palma completado con $_photoCount fotos');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Registro de palma completado")),
+        );
+
         widget.onComplete();
         Navigator.pop(context);
       }
@@ -53,28 +55,103 @@ class _PalmRegisterState extends State<PalmRegister> {
 
   @override
   Widget build(BuildContext context) {
+    final faltan = _maxPhotos - _photoCount;
+
     return Scaffold(
-      appBar: AppBar(title: Text('Registrar Palma')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      appBar: AppBar(
+        title: const Text('✋ Registro de Palma'),
+        backgroundColor: Colors.teal,
+        elevation: 0,
+      ),
+      body: Container(
+        color: Colors.grey[100],
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.pan_tool, size: 64, color: Colors.grey),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
+
+            // Ícono ilustrativo
+            Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.teal,
+              ),
+              padding: const EdgeInsets.all(18),
+              child: const Icon(Icons.pan_tool_alt_rounded,
+                  size: 48, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+
+            // Instrucción
             Text(
-              "Captura ${_photoCount + 1} de $_maxPhotos\nAbre bien la palma y manténla centrada",
-              style: TextStyle(fontSize: 18),
+              "Captura ${_photoCount + 1} de $_maxPhotos",
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Abre bien la palma, que esté centrada y enfocada en la cámara",
               textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             const SizedBox(height: 20),
+
+            // Botón de captura
             ElevatedButton.icon(
-              icon: Icon(Icons.camera_alt),
-              label: Text('Tomar Foto de Palma'),
+              icon: const Icon(Icons.camera_alt_outlined),
+              label: Text(faltan > 0
+                  ? 'Tomar Foto ($faltan restantes)'
+                  : 'Registro completo'),
               onPressed: _photoCount < _maxPhotos ? _takePalmPhoto : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                textStyle: const TextStyle(fontSize: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Miniaturas de fotos
+            if (_capturedPhotos.isNotEmpty)
+              SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _capturedPhotos.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (_, i) => ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      _capturedPhotos[i],
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              )
+            else
+              const Text(
+                "Sin fotos aún",
+                style: TextStyle(color: Colors.grey),
+              ),
+
+            const Spacer(),
+
+            // Indicador de progreso
+            LinearProgressIndicator(
+              value: _photoCount / _maxPhotos,
+              backgroundColor: Colors.grey[300],
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Colors.tealAccent),
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(12),
             ),
             const SizedBox(height: 20),
-            Text("Fotos capturadas: $_photoCount / $_maxPhotos"),
           ],
         ),
       ),

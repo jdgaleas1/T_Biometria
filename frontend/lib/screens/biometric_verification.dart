@@ -8,11 +8,48 @@ import 'Iris/iris_register.dart';
 import 'Rostro/face_register.dart';
 import 'Palma/palm_register.dart';
 import 'home_screen.dart';
-import 'Voz/voice_comparator_ffi.dart';
 import 'biometric_db_helper.dart';
 import 'Rostro/face_verify.dart';
 import 'Palma/palm_verify.dart';
 import 'Iris/iris_verify.dart';
+import 'Oído/ear_verify.dart';
+
+import 'dart:io';
+
+class VoiceNative {
+  static final _lib = Platform.isAndroid
+      ? ffi.DynamicLibrary.open("libvoice_mfcc.so")
+      : ffi.DynamicLibrary.process();
+
+  static final _compare = _lib
+      .lookup<
+          ffi.NativeFunction<
+              ffi.Double Function(
+                  ffi.Pointer<ffi.Double>,
+                  ffi.Pointer<ffi.Double>,
+                  ffi.Int32)>>('compare_voice_features')
+      .asFunction<
+          double Function(
+              ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Double>, int)>();
+
+  static double comparar(List<double> a, List<double> b) {
+    final n = a.length;
+    final ptrA = calloc<ffi.Double>(n);
+    final ptrB = calloc<ffi.Double>(n);
+
+    for (int i = 0; i < n; i++) {
+      ptrA[i] = a[i];
+      ptrB[i] = b[i];
+    }
+
+    final score = _compare(ptrA, ptrB, n);
+
+    calloc.free(ptrA);
+    calloc.free(ptrB);
+
+    return score;
+  }
+}
 
 class BiometricVerification extends StatefulWidget {
   final String email;
@@ -27,60 +64,45 @@ class BiometricVerification extends StatefulWidget {
   @override
   _BiometricVerificationState createState() => _BiometricVerificationState();
 
-  // Mover las funciones aquí
   Future<bool> verificarOido(
       List<double> storedFeatures, List<double> currentFeatures) async {
-    final length = storedFeatures.length;
-
     double sumaCuadrados = 0.0;
-
-    for (int i = 0; i < length; i++) {
-      sumaCuadrados += (storedFeatures[i] - currentFeatures[i]) *
-          (storedFeatures[i] - currentFeatures[i]);
+    for (int i = 0; i < storedFeatures.length; i++) {
+      sumaCuadrados += pow(storedFeatures[i] - currentFeatures[i], 2);
     }
-
-    final distance = sqrt(sumaCuadrados);
-
-    print('Distancia Euclidiana (similaridad oído): $distance');
-
-    const threshold = 0.8;
-    return distance <= threshold;
+    return sqrt(sumaCuadrados) <= 0.8;
   }
 
   Future<bool> verificarVoz(
       List<double> storedFeatures, List<double> currentFeatures) async {
-    final length = storedFeatures.length;
-
-    final storedPtr = calloc<ffi.Double>(length);
-    final currentPtr = calloc<ffi.Double>(length);
-
-    for (int i = 0; i < length; i++) {
-      storedPtr[i] = storedFeatures[i];
-      currentPtr[i] = currentFeatures[i];
-    }
-
-    final similarity =
-        VoiceComparatorFFI.compareVoiceFeatures(storedPtr, currentPtr, length);
-
-    calloc.free(storedPtr);
-    calloc.free(currentPtr);
-
-    print('Similarity voz: $similarity');
-
-    const threshold = 0.8;
-    return similarity >= threshold;
+    final similarity = VoiceNative.comparar(storedFeatures, currentFeatures);
+    return similarity >= 0.8;
   }
 }
 
 class _BiometricVerificationState extends State<BiometricVerification> {
   int completed = 0;
+  String nombreCompleto = "";
+
+  @override
+  void initState() {
+    super.initState();
+    cargarPerfil();
+  }
+
+  Future<void> cargarPerfil() async {
+    try {
+      final perfil = await BiometricDBHelper().obtenerPerfil(widget.email);
+      setState(() {
+        nombreCompleto = "${perfil['nombres']} ${perfil['apellidos']}".trim();
+      });
+    } catch (_) {
+      nombreCompleto = widget.email;
+    }
+  }
 
   void markCompleted() {
-    setState(() {
-      completed++;
-      print("✅ Modalidad verificada. Total completadas: $completed");
-    });
-
+    setState(() => completed++);
     if (completed == 2) {
       Future.microtask(() {
         Navigator.pushReplacement(
@@ -100,128 +122,121 @@ class _BiometricVerificationState extends State<BiometricVerification> {
       case "Voz":
         screen = VoiceRegister(
           isVerification: true,
-          onCompleteWithFeatures: (List<double> currentFeatures) async {
+          onCompleteWithFeatures: (currentFeatures) async {
             try {
-              List<double> storedFeatures =
+              final stored =
                   await BiometricDBHelper().getTemplate(widget.email, 'voice');
-
-              bool match =
-                  await widget.verificarVoz(storedFeatures, currentFeatures);
-
-              if (match) {
-                print("✅ Voz verificada con éxito.");
-                markCompleted();
-              } else {
-                print("❌ Voz no coincide.");
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Verificación de Voz fallida")),
-                );
-              }
-            } catch (e) {
-              print("❌ Error cargando features de Voz: $e");
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Error cargando features de Voz")),
-              );
+              final match = await widget.verificarVoz(stored, currentFeatures);
+              match
+                  ? markCompleted()
+                  : mostrarMensaje("Verificación de Voz fallida");
+            } catch (_) {
+              mostrarMensaje("Error cargando features de Voz");
             }
           },
         );
         break;
 
       case "Oído":
-        screen = EarRegister(
-          isVerification: true,
-          onCompleteWithFeatures: (List<double> currentFeatures) async {
+        screen = EarVerify(
+          email: widget.email,
+          onSuccess: markCompleted, // Este era obligatorio
+          onCompleteWithFeatures: (currentFeatures) async {
             try {
-              List<double> storedFeatures =
+              final stored =
                   await BiometricDBHelper().getTemplate(widget.email, 'ear');
-
-              bool match =
-                  await widget.verificarOido(storedFeatures, currentFeatures);
-
-              if (match) {
-                print("✅ Oído verificado con éxito.");
-                markCompleted();
-              } else {
-                print("❌ Oído no coincide.");
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Verificación de Oído fallida")),
-                );
-              }
-            } catch (e) {
-              print("❌ Error cargando features de Oído: $e");
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text("Error cargando features de Oído")),
-              );
+              final match = await widget.verificarOido(stored, currentFeatures);
+              match
+                  ? markCompleted()
+                  : mostrarMensaje("Verificación de Oído fallida");
+            } catch (_) {
+              mostrarMensaje("Error cargando features de Oído");
             }
           },
         );
         break;
 
       case "Iris":
-        screen = IrisVerify(
-          email: widget.email,
-          onSuccess: () {
-            print("✅ Iris verificado con éxito.");
-            markCompleted();
-          },
-        );
+        screen = IrisVerify(email: widget.email, onSuccess: markCompleted);
         break;
+
       case "Rostro":
-        screen = FaceVerify(
-          email: widget.email,
-          onSuccess: () {
-            print("✅ Rostro verificado con éxito.");
-            markCompleted();
-          },
-        );
+        screen = FaceVerify(email: widget.email, onSuccess: markCompleted);
         break;
 
       case "Palma":
-        screen = PalmVerify(
-          email: widget.email,
-          onSuccess: () {
-            print("✅ Palma verificada con éxito.");
-            markCompleted();
-          },
-        );
+        screen = PalmVerify(email: widget.email, onSuccess: markCompleted);
         break;
 
       default:
         throw Exception("Modalidad no soportada: $option");
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  void mostrarMensaje(String mensaje) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensaje)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verificación Biométrica')),
+      appBar: AppBar(
+        title: const Text('🔐 Verificación Biométrica'),
+        backgroundColor: Colors.deepPurple,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Correo: ${widget.email}',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Verifica tu identidad usando:',
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 20),
-            for (String option in widget.selected)
-              ElevatedButton(
-                child: Text("Verificar con $option"),
-                onPressed: () => navigateTo(option),
+              '👤 $nombreCompleto',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
               ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Selecciona una modalidad para verificar:',
+              style: TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 20),
-            Text("Progreso: $completed / 2"),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: widget.selected.map((mod) {
+                return ElevatedButton.icon(
+                  onPressed: () => navigateTo(mod),
+                  icon: const Icon(Icons.verified_user),
+                  label: Text(mod),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 30),
+            Text("✅ Verificaciones completadas: $completed / 2",
+                style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+              value: completed / 2,
+              minHeight: 10,
+              backgroundColor: Colors.grey.shade300,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+            )
           ],
         ),
       ),

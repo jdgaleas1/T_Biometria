@@ -111,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   '¿No tienes cuenta? Registrarse',
                   style: TextStyle(
                     color: Colors.teal[700],
-                    decoration: TextDecoration.underline,
+                    decoration: TextDecoration.none,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

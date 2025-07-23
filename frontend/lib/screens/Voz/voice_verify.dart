@@ -3,12 +3,78 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi' as ffi;
+import 'dart:ffi';
+import 'dart:io';
+import 'package:ffi/ffi.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 import '../biometric_db_helper.dart';
-import 'voice_mfcc_ffi.dart';
+
+typedef ComputeVoiceMfccNative = ffi.Pointer<ffi.Double> Function(
+    ffi.Pointer<Utf8>, ffi.Pointer<ffi.Int32>);
+typedef ComputeVoiceMfccDart = Pointer<Double> Function(
+    Pointer<Utf8>, Pointer<ffi.Int32>);
+
+typedef FreeMfccNative = ffi.Void Function(ffi.Pointer<ffi.Double>);
+typedef FreeMfccDart = void Function(ffi.Pointer<ffi.Double>);
+
+typedef CompareVoiceFeaturesNative = ffi.Double Function(
+    ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Double>, ffi.Int32);
+typedef CompareVoiceFeaturesDart = double Function(
+    ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Double>, int);
+
+class VoiceNative {
+  static final _lib = Platform.isAndroid
+      ? ffi.DynamicLibrary.open("libvoice_mfcc.so")
+      : ffi.DynamicLibrary.process();
+
+  static final ComputeVoiceMfccDart computeVoiceMfcc = _lib
+      .lookup<ffi.NativeFunction<ComputeVoiceMfccNative>>('compute_voice_mfcc')
+      .asFunction();
+
+  static final FreeMfccDart freeMfcc =
+      _lib.lookup<ffi.NativeFunction<FreeMfccNative>>('free_mfcc').asFunction();
+
+  static final CompareVoiceFeaturesDart compareVoiceFeatures = _lib
+      .lookup<ffi.NativeFunction<CompareVoiceFeaturesNative>>(
+          'compare_voice_features')
+      .asFunction();
+
+  static List<double> extractMfcc(String filePath) {
+    final pathPtr = filePath.toNativeUtf8();
+    final numCoefficientsPtr = calloc<ffi.Int32>();
+
+    final mfccPtr = computeVoiceMfcc(pathPtr, numCoefficientsPtr);
+    final numCoefficients = numCoefficientsPtr.value;
+    final mfccList = List<double>.generate(
+        numCoefficients, (i) => mfccPtr.elementAt(i).value);
+
+    freeMfcc(mfccPtr);
+    calloc.free(pathPtr);
+    calloc.free(numCoefficientsPtr);
+
+    return mfccList;
+  }
+
+  static double comparar(List<double> a, List<double> b) {
+    final n = a.length;
+    final ptrA = calloc<ffi.Double>(n);
+    final ptrB = calloc<ffi.Double>(n);
+
+    for (int i = 0; i < n; i++) {
+      ptrA[i] = a[i];
+      ptrB[i] = b[i];
+    }
+
+    final score = compareVoiceFeatures(ptrA, ptrB, n);
+    calloc.free(ptrA);
+    calloc.free(ptrB);
+    return score;
+  }
+}
 
 class VoiceVerify extends StatefulWidget {
   final String email;
@@ -70,10 +136,10 @@ class _VoiceVerifyState extends State<VoiceVerify> {
 
   Future<void> _verificarMFCC(File file) async {
     try {
-      final currentMFCC = await VoiceMfccFFI.extractMfcc(file.path);
+      final currentMFCC = VoiceNative.extractMfcc(file.path);
       final storedMFCC =
           await BiometricDBHelper().getTemplate(widget.email, 'voice');
-      final sim = _cosineSimilarity(currentMFCC, storedMFCC);
+      final sim = VoiceNative.comparar(currentMFCC, storedMFCC);
 
       if (sim >= 0.8) {
         setState(() => _result = '✅ Voz verificada offline ($sim)');
@@ -85,16 +151,6 @@ class _VoiceVerifyState extends State<VoiceVerify> {
       print('❌ Error en verificación offline: $e');
       setState(() => _result = '❌ Error verificando voz offline');
     }
-  }
-
-  double _cosineSimilarity(List<double> a, List<double> b) {
-    double dot = 0, normA = 0, normB = 0;
-    for (int i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-    return dot / (sqrt(normA) * sqrt(normB));
   }
 
   Uint8List _buildWavFile(List<int> pcmData) {

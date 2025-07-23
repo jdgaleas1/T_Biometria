@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
+import 'face_utils.dart'; // Ajusta la ruta si es distinta
 
 class FaceUtils {
   static late Interpreter _interpreter;
@@ -10,7 +11,8 @@ class FaceUtils {
 
   static Future<void> cargarModelo() async {
     if (_modelLoaded) return;
-    Interpreter.fromAsset('models/mobile_facenet.tflite');
+    _interpreter =
+        await Interpreter.fromAsset('assets/models/mobilefacenet.tflite');
     _modelLoaded = true;
   }
 

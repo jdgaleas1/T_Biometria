@@ -26,7 +26,6 @@ class _IrisVerifyState extends State<IrisVerify> {
   Future<void> _verificar() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.camera);
-
     if (picked == null) return;
 
     setState(() => _verificando = true);
@@ -51,13 +50,13 @@ class _IrisVerifyState extends State<IrisVerify> {
 
     setState(() {
       _verificando = false;
-      if (promedio >= 0.85) {
+      if (promedio >= 0.70) {
         _resultado =
-            '✅ Iris verificado (similitud: ${promedio.toStringAsFixed(3)})';
+            '✅ Iris verificado\n(Similitud: ${promedio.toStringAsFixed(3)})';
         widget.onSuccess();
       } else {
         _resultado =
-            '❌ Iris no coincide (similitud: ${promedio.toStringAsFixed(3)})';
+            '❌ Iris no coincide\n(Similitud: ${promedio.toStringAsFixed(3)})';
       }
     });
   }
@@ -65,7 +64,6 @@ class _IrisVerifyState extends State<IrisVerify> {
   double _calcularSimilitud(img.Image a, img.Image b) {
     final resizedA = img.copyResize(a, width: 128, height: 128);
     final resizedB = img.copyResize(b, width: 128, height: 128);
-
     double suma = 0.0;
     for (int y = 0; y < 128; y++) {
       for (int x = 0; x < 128; x++) {
@@ -75,28 +73,84 @@ class _IrisVerifyState extends State<IrisVerify> {
       }
     }
     final maxDiff = 128.0 * 128.0 * 255.0;
-    return 1.0 - (suma / maxDiff); // valor entre 0 y 1
+    return 1.0 - (suma / maxDiff);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verificar Iris')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      appBar: AppBar(
+        title: const Text('👁️ Verificación de Iris'),
+        backgroundColor: Colors.teal.shade700,
+        elevation: 0,
+      ),
+      body: Container(
+        color: Colors.grey[100],
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Presiona para capturar una nueva foto del iris"),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.remove_red_eye),
-              label: const Text("Verificar Iris"),
-              onPressed: _verificando ? null : _verificar,
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 800),
+              opacity: _verificando ? 0.4 : 1.0,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.teal,
+                ),
+                child: const Icon(Icons.remove_red_eye,
+                    size: 60, color: Colors.white),
+              ),
             ),
             const SizedBox(height: 20),
+            Text(
+              "Presiona el botón para escanear tu iris.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[800]),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.camera_alt),
+              label: const Text("Verificar Iris"),
+              onPressed: _verificando ? null : _verificar,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal.shade700,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+                textStyle:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+            ),
+            const SizedBox(height: 30),
             if (_resultado.isNotEmpty)
-              Text(_resultado, style: const TextStyle(fontSize: 16)),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _resultado.contains("✅")
+                      ? Colors.green.shade100
+                      : Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _resultado,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _resultado.contains("✅")
+                        ? Colors.green.shade800
+                        : Colors.red.shade800,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

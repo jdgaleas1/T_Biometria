@@ -10,16 +10,17 @@ class FaceVerify extends StatefulWidget {
   final String email;
   final VoidCallback onSuccess;
 
-  FaceVerify({required this.email, required this.onSuccess});
+  const FaceVerify({super.key, required this.email, required this.onSuccess});
 
   @override
-  _FaceVerifyState createState() => _FaceVerifyState();
+  State<FaceVerify> createState() => _FaceVerifyState();
 }
 
 class _FaceVerifyState extends State<FaceVerify> {
   final ImagePicker _picker = ImagePicker();
   late Interpreter _interpreter;
-  String _result = '';
+  String _resultado = '';
+  bool _verificando = false;
 
   @override
   void initState() {
@@ -69,13 +70,16 @@ class _FaceVerifyState extends State<FaceVerify> {
     final pickedFile = await _picker.pickImage(source: ImageSource.camera);
     if (pickedFile == null) return;
 
+    setState(() => _verificando = true);
+
     final newEmbedding = await _getEmbedding(File(pickedFile.path));
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/face_embedding_${widget.email}.txt');
 
     if (!file.existsSync()) {
       setState(() {
-        _result = "❌ No hay registro previo para este usuario.";
+        _resultado = "❌ No hay registro previo para este usuario.";
+        _verificando = false;
       });
       return;
     }
@@ -85,12 +89,13 @@ class _FaceVerifyState extends State<FaceVerify> {
     final distance = _cosineDistance(referenceEmbedding, newEmbedding);
 
     setState(() {
+      _verificando = false;
       if (distance < 0.4) {
-        _result =
-            '✅ Rostro verificado automáticamente (distancia: ${distance.toStringAsFixed(3)})';
+        _resultado =
+            '✅ Rostro verificado (distancia: ${distance.toStringAsFixed(3)})';
         widget.onSuccess();
       } else {
-        _result =
+        _resultado =
             '❌ Rostro no coincide (distancia: ${distance.toStringAsFixed(3)})';
       }
     });
@@ -99,18 +104,68 @@ class _FaceVerifyState extends State<FaceVerify> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Verificar Rostro')),
-      body: Center(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text('🔍 Verificación Facial'),
+        backgroundColor: Colors.deepPurple,
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton.icon(
-              icon: Icon(Icons.verified_user),
-              label: Text("Verificar con Foto"),
-              onPressed: _verifyFace,
-            ),
+            const Icon(Icons.face_retouching_natural,
+                size: 100, color: Colors.deepPurple),
             const SizedBox(height: 20),
-            Text(_result, textAlign: TextAlign.center),
+            Text(
+              "Presiona el botón para capturar tu rostro",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: _verificando ? null : _verifyFace,
+              icon: const Icon(Icons.camera_alt),
+              label: const Text("Verificar Rostro"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            if (_resultado.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _resultado.contains('✅')
+                      ? Colors.green[50]
+                      : Colors.red[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _resultado.contains('✅') ? Colors.green : Colors.red,
+                  ),
+                ),
+                child: Text(
+                  _resultado,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _resultado.contains('✅')
+                        ? Colors.green[800]
+                        : Colors.red[800],
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
           ],
         ),
       ),
