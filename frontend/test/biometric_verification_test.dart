@@ -3,103 +3,103 @@ import 'package:tesisprueba/screens/biometric_verification.dart';
 import 'package:tesisprueba/screens/biometric_db_helper.dart';
 
 void main() {
-  // Grupo 1: Pruebas unitarias (verificación de comparación biométrica)
+  const identificador = 'user123';
+  const tipoBiometria = 'oido';
+
+  final storedFeatures = [0.8, 0.6, 0.9];
+  final currentFeaturesSuccess = [0.8, 0.6, 0.8];
+  final currentFeaturesFail = [0.2, 0.3, 0.4];
+
   group('Pruebas unitarias - Comparación de características biométricas', () {
     test('Verificación de Oído - Comparación exitosa', () async {
-      final storedFeatures = [0.8, 0.6, 0.9];
-      final currentFeatures = [0.8, 0.6, 0.8];
-
       final biometricVerification = BiometricVerification(
-        email: 'user@example.com',
+        identificador: identificador,
         selected: ['Voz', 'Oído'],
       );
 
       final result = await biometricVerification.verificarOido(
         storedFeatures,
-        currentFeatures,
+        currentFeaturesSuccess,
       );
       expect(result, true);
     });
 
     test('Verificación de Oído - Comparación fallida', () async {
-      final storedFeatures = [0.8, 0.6, 0.9];
-      final currentFeatures = [0.2, 0.3, 0.4];
-
       final biometricVerification = BiometricVerification(
-        email: 'user@example.com',
+        identificador: identificador,
         selected: ['Voz', 'Oído'],
       );
 
       final result = await biometricVerification.verificarOido(
         storedFeatures,
-        currentFeatures,
+        currentFeaturesFail,
       );
       expect(result, false);
     });
   });
 
-  // Grupo 2: Pruebas de integración (base de datos y biometría)
   group('Pruebas de integración - Base de datos y módulos biométricos', () {
-    test('Integración de base de datos y módulos biométricos', () async {
-      final storedFeatures = [0.8, 0.6, 0.9];
-      final email = 'user@example.com';
-      final modality = 'ear';
+    test('Integración: guardar y recuperar template', () async {
+      final db = BiometricDBHelper();
 
-      await BiometricDBHelper().insertTemplate(email, modality, storedFeatures);
+      // Inserta usuario si no existe
+      int? idUsuario = await db.obtenerIdUsuario(identificador);
+      idUsuario ??= await db.insertarUsuario(
+        nombres: 'Usuario',
+        apellidos: 'Ejemplo',
+        identificadorUnico: identificador,
+      );
 
-      final retrievedFeatures =
-          await BiometricDBHelper().getTemplate(email, modality);
+      // Inserta plantilla biométrica
+      await db.insertarCredencialBiometrica(
+        idUsuario: idUsuario,
+        tipoBiometria: tipoBiometria,
+        features: storedFeatures,
+        versionAlgoritmo: '1.0',
+      );
 
-      expect(retrievedFeatures, equals(storedFeatures));
+      final credenciales = await db.obtenerCredenciales(idUsuario);
+      expect(
+          credenciales.any((c) => c['tipo_biometria'] == tipoBiometria), true);
     });
   });
 
-  // Grupo 3: Pruebas de validación biométrica
   group('Pruebas de validación - Falsos positivos y negativos', () {
-    test('Tasa de falsos positivos/negativos', () async {
-      final storedFeatures = [0.8, 0.6, 0.9];
-      final fakeFeatures = [0.1, 0.2, 0.3];
-
+    test('Detecta correctamente falsos positivos y negativos', () async {
       final biometricVerification = BiometricVerification(
-        email: 'user@example.com',
+        identificador: identificador,
         selected: ['Voz', 'Oído'],
       );
 
-      final result = await biometricVerification.verificarOido(
+      final resultNegativo = await biometricVerification.verificarOido(
         storedFeatures,
-        fakeFeatures,
+        currentFeaturesFail,
       );
-      expect(result, false);
+      expect(resultNegativo, false);
 
-      final validFeatures = [0.8, 0.6, 0.9];
-      final validResult = await biometricVerification.verificarOido(
+      final resultPositivo = await biometricVerification.verificarOido(
         storedFeatures,
-        validFeatures,
+        storedFeatures,
       );
-      expect(validResult, true);
+      expect(resultPositivo, true);
     });
   });
 
-  // Grupo 4: Pruebas de rendimiento
   group('Pruebas de rendimiento - Verificación biométrica', () {
-    test('Tiempo de verificación de oído menor a 500ms', () async {
-      final storedFeatures = [0.8, 0.6, 0.9];
-      final currentFeatures = [0.8, 0.6, 0.8];
-
+    test('Tiempo de verificación menor a 500ms', () async {
       final biometricVerification = BiometricVerification(
-        email: 'user@example.com',
+        identificador: identificador,
         selected: ['Voz', 'Oído'],
       );
 
       final stopwatch = Stopwatch()..start();
       await biometricVerification.verificarOido(
         storedFeatures,
-        currentFeatures,
+        currentFeaturesSuccess,
       );
       stopwatch.stop();
 
-      print(
-          'Tiempo de verificación de oído: ${stopwatch.elapsedMilliseconds}ms');
+      print('⏱️ Tiempo de verificación: ${stopwatch.elapsedMilliseconds}ms');
       expect(stopwatch.elapsedMilliseconds, lessThan(500));
     });
   });

@@ -5,11 +5,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:path/path.dart';
 import 'package:http_parser/http_parser.dart';
 import './biometric_db_helper.dart';
+import 'dart:typed_data';
 
 Future<void> verificarOidoHibrido({
   required List<double> features,
   required List<File> imagenes,
-  required String email,
+  required String identificador,
   required Function(bool match, double similitud) onResultado,
 }) async {
   final connectivityResult = await Connectivity().checkConnectivity();
@@ -17,7 +18,7 @@ Future<void> verificarOidoHibrido({
 
   if (connectivityResult != ConnectivityResult.none) {
     try {
-      final uri = Uri.parse('http://10.43.114.144:8080/registro');
+      final uri = Uri.parse('http://192.168.100.98:8080//oreja/autenticar');
       final request = http.MultipartRequest('POST', uri);
 
       for (int i = 0; i < imagenes.length; i++) {
@@ -44,23 +45,53 @@ Future<void> verificarOidoHibrido({
   }
 
   if (!enviadoRemotamente) {
-    // 💾 Guardamos el template localmente si no fue posible enviarlo
     try {
-      await BiometricDBHelper().insertTemplate(email, 'ear', features);
+      final idUsuario =
+          await BiometricDBHelper().obtenerIdUsuario(identificador);
+
+      if (idUsuario == null) {
+        print('❌ Usuario no encontrado: $identificador');
+        onResultado(false, 0.0);
+        return;
+      }
+
+      await BiometricDBHelper().insertarCredencialBiometrica(
+        idUsuario: idUsuario,
+        tipoBiometria: 'oido',
+        features: features,
+        versionAlgoritmo: '1.0',
+      );
+
       print('📥 [Local] Template oído guardado en BD local');
     } catch (e) {
       print('❌ No se pudo guardar localmente: $e');
     }
 
-    // También intentamos comparar localmente (verificación híbrida)
+    // Intentar comparar con el template local si ya existe
     try {
-      final templateLocal = await BiometricDBHelper().getTemplate(email, 'ear');
-
-      if (templateLocal == null) {
-        print('❌ No se encontró plantilla local para $email');
+      final idUsuario =
+          await BiometricDBHelper().obtenerIdUsuario(identificador);
+      if (idUsuario == null) {
         onResultado(false, 0.0);
         return;
       }
+
+      final credenciales =
+          await BiometricDBHelper().obtenerCredenciales(idUsuario);
+
+      final entry = credenciales.firstWhere(
+        (c) => c['tipo_biometria'] == 'oido',
+        orElse: () => {},
+      );
+
+      if (entry.isEmpty) {
+        print('❌ No se encontró plantilla local para $identificador');
+        onResultado(false, 0.0);
+        return;
+      }
+
+      final blob = entry['template'] as Uint8List;
+      final templateLocal = Float64List.view(blob.buffer).toList();
 
       double similitud = 0.0;
       for (int i = 0; i < features.length; i++) {

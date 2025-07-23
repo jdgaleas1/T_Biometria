@@ -7,15 +7,16 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../biometric_db_helper.dart';
 import 'ear_feature_extractor_simple.dart';
 import '../api_service_ear.dart';
+import 'dart:typed_data';
 
 class EarVerify extends StatefulWidget {
-  final String email;
+  final String identificador;
   final VoidCallback onSuccess;
-  final void Function(List<double>)? onCompleteWithFeatures; // ✅ Nuevo
+  final void Function(List<double>)? onCompleteWithFeatures;
 
   const EarVerify({
     super.key,
-    required this.email,
+    required this.identificador,
     required this.onSuccess,
     this.onCompleteWithFeatures,
   });
@@ -40,7 +41,6 @@ class _EarVerifyState extends State<EarVerify> {
 
   Future<void> _verificar() async {
     if (capturedImages.length < 1) return;
-
     setState(() => _procesando = true);
 
     try {
@@ -57,11 +57,18 @@ class _EarVerifyState extends State<EarVerify> {
       final connectivity = await Connectivity().checkConnectivity();
       final hayInternet = connectivity != ConnectivityResult.none;
 
+      final idUsuario =
+          await BiometricDBHelper().obtenerIdUsuario(widget.identificador);
+
+      if (idUsuario == null) {
+        throw Exception("Usuario no encontrado");
+      }
+
       if (hayInternet) {
         await verificarOidoHibrido(
           features: vectorPromedio,
           imagenes: capturedImages,
-          email: widget.email,
+          identificador: widget.identificador, // usado como ID lógico remoto
           onResultado: (match, similitud) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
@@ -74,25 +81,33 @@ class _EarVerifyState extends State<EarVerify> {
           },
         );
       } else {
-        final stored = await BiometricDBHelper()
-            .getTemplate(widget.email, 'ear')
-            .catchError((_) => null);
+        final credenciales =
+            await BiometricDBHelper().obtenerCredenciales(idUsuario);
 
-        if (stored != null) {
+        final storedEntry = credenciales.firstWhere(
+          (c) => c['tipo_biometria'] == 'oido',
+          orElse: () => {},
+        );
+
+        if (storedEntry.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("❌ No hay datos locales para comparar")),
+          );
+        } else {
+          final blob = storedEntry['template'] as Uint8List;
+          final stored = Float64List.view(blob.buffer).toList();
           final similitud = EarFeatureExtractorSimple.calcularSimilitud(
               stored, vectorPromedio);
           final match = similitud >= 0.8;
+
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(match
                 ? '✅ Verificación local exitosa (similitud: $similitud)'
                 : '❌ Verificación local fallida (similitud: $similitud)'),
           ));
+
           if (match) widget.onSuccess();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text("❌ No hay datos locales para comparar")),
-          );
         }
       }
 

@@ -56,14 +56,14 @@ class VoiceRegister extends StatefulWidget {
   final bool isVerification;
   final Function(List<double>)? onCompleteWithFeatures;
   final VoidCallback? onComplete;
-  final String? email;
+  final String? identificador;
 
   const VoiceRegister({
     super.key,
     this.isVerification = false,
     this.onCompleteWithFeatures,
     this.onComplete,
-    this.email,
+    this.identificador,
   });
 
   @override
@@ -220,7 +220,7 @@ class _VoiceRegisterState extends State<VoiceRegister> {
     );
   }
 
-  String get email => widget.email ?? _emailController.text.trim();
+  String get email => widget.identificador ?? _emailController.text.trim();
 
   Future<void> _enviarGrabacion() async {
     if (_audioPath == null || email.isEmpty) {
@@ -290,7 +290,19 @@ class _VoiceRegisterState extends State<VoiceRegister> {
         print('📥 Guardando localmente porque no se pudo enviar');
         try {
           final List<double> mfcc = VoiceNative.extractMfcc(_audioPath!);
-          await BiometricDBHelper().insertTemplate(email, 'voice', mfcc);
+          final idUsuario = await BiometricDBHelper().obtenerIdUsuario(email);
+          if (idUsuario == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("❌ Usuario no encontrado")),
+            );
+            return;
+          }
+          await BiometricDBHelper().insertarCredencialBiometrica(
+            idUsuario: idUsuario,
+            tipoBiometria: 'voz',
+            features: mfcc,
+            versionAlgoritmo: '1.0',
+          );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('📥 Guardado localmente')),
           );
@@ -334,7 +346,7 @@ class _VoiceRegisterState extends State<VoiceRegister> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                if (widget.email == null)
+                if (widget.identificador == null)
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(
@@ -438,8 +450,24 @@ class _VoiceRegisterState extends State<VoiceRegister> {
                               try {
                                 final List<double> mfcc =
                                     VoiceNative.extractMfcc(_audioPath!);
+                                final idUsuario = await BiometricDBHelper()
+                                    .obtenerIdUsuario(email);
+                                if (idUsuario == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content:
+                                            Text("❌ Usuario no encontrado")),
+                                  );
+                                  return;
+                                }
                                 await BiometricDBHelper()
-                                    .insertTemplate(email, 'voice', mfcc);
+                                    .insertarCredencialBiometrica(
+                                  idUsuario: idUsuario,
+                                  tipoBiometria: 'voz',
+                                  features: mfcc,
+                                  versionAlgoritmo: '1.0',
+                                );
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                       content: Text(

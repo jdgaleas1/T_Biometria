@@ -18,17 +18,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController apellidoController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
+  final TextEditingController identificadorController = TextEditingController();
   final TextEditingController paisController = TextEditingController();
 
   bool camposCompletos = false;
+  int? idUsuario;
 
   @override
   void initState() {
     super.initState();
     nombreController.addListener(_validarCampos);
     apellidoController.addListener(_validarCampos);
-    emailController.addListener(_validarCampos);
+    identificadorController.addListener(_validarCampos);
     paisController.addListener(_validarCampos);
   }
 
@@ -36,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       camposCompletos = nombreController.text.isNotEmpty &&
           apellidoController.text.isNotEmpty &&
-          emailController.text.isNotEmpty &&
+          identificadorController.text.isNotEmpty &&
           paisController.text.isNotEmpty;
     });
   }
@@ -48,20 +49,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> guardarRegistroBiometrico() async {
-    await BiometricDBHelper().insertarUsuarioCompleto(
-      email: emailController.text,
-      nombres: nombreController.text,
-      apellidos: apellidoController.text,
-      pais: paisController.text,
-      templates: {}, // Aquí luego puedes pasar los vectores biométricos reales
-    );
+    idUsuario = await BiometricDBHelper()
+        .obtenerIdUsuario(identificadorController.text);
+
+    if (idUsuario == null) {
+      idUsuario = await BiometricDBHelper().insertarUsuario(
+        nombres: nombreController.text,
+        apellidos: apellidoController.text,
+        identificadorUnico: identificadorController.text,
+      );
+    }
   }
 
   @override
   void dispose() {
     nombreController.dispose();
     apellidoController.dispose();
-    emailController.dispose();
+    identificadorController.dispose();
     paisController.dispose();
     super.dispose();
   }
@@ -78,15 +82,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ];
     final screens = [
       () => EarRegister(
-          onComplete: () => updateState(0), email: emailController.text),
+          onComplete: () => updateState(0),
+          identificador: identificadorController.text),
       () => FaceRegister(
-          onComplete: () => updateState(1), email: emailController.text),
+          onComplete: () => updateState(1),
+          identificador: identificadorController.text),
       () => PalmRegister(
-          onComplete: () => updateState(2), email: emailController.text),
+          onComplete: () => updateState(2),
+          identificador: identificadorController.text),
       () => IrisRegister(
-          onComplete: () => updateState(3), email: emailController.text),
+          onComplete: () => updateState(3),
+          identificador: identificadorController.text),
       () => VoiceRegister(
-          onComplete: () => updateState(4), email: emailController.text),
+          onComplete: () => updateState(4),
+          identificador: identificadorController.text),
     ];
 
     double progress = completado.where((e) => e).length / 5;
@@ -123,8 +132,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildInputField(
                   apellidoController, 'Apellidos', 'Ingresa tus apellidos'),
               const SizedBox(height: 16),
-              _buildInputField(
-                  emailController, 'Correo Electrónico', 'ejemplo@correo.com'),
+              _buildInputField(identificadorController, 'Identificador único',
+                  'Correo o cédula'),
               const SizedBox(height: 16),
               _buildInputField(paisController, 'País', 'Ej. Ecuador'),
               const SizedBox(height: 30),
@@ -154,8 +163,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       onPressed: camposCompletos
-                          ? () => Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => screens[i]()))
+                          ? () async {
+                              await guardarRegistroBiometrico();
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => screens[i]()));
+                            }
                           : null,
                     ),
                   );
@@ -189,8 +203,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                HomeScreen(nombreUsuario: emailController.text),
+                            builder: (context) => HomeScreen(
+                                nombreUsuario: identificadorController.text),
                           ),
                         );
                       }

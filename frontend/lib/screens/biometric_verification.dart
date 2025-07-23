@@ -13,7 +13,7 @@ import 'Rostro/face_verify.dart';
 import 'Palma/palm_verify.dart';
 import 'Iris/iris_verify.dart';
 import 'Oído/ear_verify.dart';
-
+import 'dart:typed_data';
 import 'dart:io';
 
 class VoiceNative {
@@ -52,12 +52,11 @@ class VoiceNative {
 }
 
 class BiometricVerification extends StatefulWidget {
-  final String email;
+  final String identificador;
   final List<String> selected;
 
   const BiometricVerification({
-    super.key,
-    required this.email,
+    required this.identificador,
     required this.selected,
   });
 
@@ -83,6 +82,7 @@ class BiometricVerification extends StatefulWidget {
 class _BiometricVerificationState extends State<BiometricVerification> {
   int completed = 0;
   String nombreCompleto = "";
+  int? idUsuario;
 
   @override
   void initState() {
@@ -92,12 +92,22 @@ class _BiometricVerificationState extends State<BiometricVerification> {
 
   Future<void> cargarPerfil() async {
     try {
-      final perfil = await BiometricDBHelper().obtenerPerfil(widget.email);
+      idUsuario =
+          await BiometricDBHelper().obtenerIdUsuario(widget.identificador);
+
+      if (idUsuario == null) {
+        mostrarMensaje("Usuario no encontrado");
+        return;
+      }
+
+      final perfil =
+          await BiometricDBHelper().obtenerPerfil(widget.identificador);
+
       setState(() {
         nombreCompleto = "${perfil['nombres']} ${perfil['apellidos']}".trim();
       });
     } catch (_) {
-      nombreCompleto = widget.email;
+      nombreCompleto = widget.identificador;
     }
   }
 
@@ -108,7 +118,8 @@ class _BiometricVerificationState extends State<BiometricVerification> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomeScreen(nombreUsuario: widget.email),
+            builder: (context) =>
+                HomeScreen(nombreUsuario: widget.identificador),
           ),
         );
       });
@@ -124,9 +135,12 @@ class _BiometricVerificationState extends State<BiometricVerification> {
           isVerification: true,
           onCompleteWithFeatures: (currentFeatures) async {
             try {
-              final stored =
-                  await BiometricDBHelper().getTemplate(widget.email, 'voice');
-              final match = await widget.verificarVoz(stored, currentFeatures);
+              final creds =
+                  await BiometricDBHelper().obtenerCredenciales(idUsuario!);
+              final match = await widget.verificarVoz(
+                _extractFeatures(creds, 'voz'),
+                currentFeatures,
+              );
               match
                   ? markCompleted()
                   : mostrarMensaje("Verificación de Voz fallida");
@@ -139,13 +153,16 @@ class _BiometricVerificationState extends State<BiometricVerification> {
 
       case "Oído":
         screen = EarVerify(
-          email: widget.email,
-          onSuccess: markCompleted, // Este era obligatorio
+          identificador: widget.identificador,
+          onSuccess: markCompleted,
           onCompleteWithFeatures: (currentFeatures) async {
             try {
-              final stored =
-                  await BiometricDBHelper().getTemplate(widget.email, 'ear');
-              final match = await widget.verificarOido(stored, currentFeatures);
+              final creds =
+                  await BiometricDBHelper().obtenerCredenciales(idUsuario!);
+              final match = await widget.verificarOido(
+                _extractFeatures(creds, 'oido'),
+                currentFeatures,
+              );
               match
                   ? markCompleted()
                   : mostrarMensaje("Verificación de Oído fallida");
@@ -157,15 +174,24 @@ class _BiometricVerificationState extends State<BiometricVerification> {
         break;
 
       case "Iris":
-        screen = IrisVerify(email: widget.email, onSuccess: markCompleted);
+        screen = IrisVerify(
+          identificador: widget.identificador,
+          onSuccess: markCompleted,
+        );
         break;
 
       case "Rostro":
-        screen = FaceVerify(email: widget.email, onSuccess: markCompleted);
+        screen = FaceVerify(
+          identificador: widget.identificador,
+          onSuccess: markCompleted,
+        );
         break;
 
       case "Palma":
-        screen = PalmVerify(email: widget.email, onSuccess: markCompleted);
+        screen = PalmVerify(
+          identificador: widget.identificador,
+          onSuccess: markCompleted,
+        );
         break;
 
       default:
@@ -178,6 +204,20 @@ class _BiometricVerificationState extends State<BiometricVerification> {
   void mostrarMensaje(String mensaje) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(mensaje)));
+  }
+
+  List<double> _extractFeatures(
+      List<Map<String, dynamic>> lista, String modalidad) {
+    final item = lista.firstWhere(
+      (c) =>
+          c['tipo_biometria'].toString().toLowerCase() ==
+          modalidad.toLowerCase(),
+      orElse: () => throw Exception('No hay datos para $modalidad'),
+    );
+
+    final blob = item['template'] as Uint8List;
+    final buffer = Float64List.view(blob.buffer);
+    return buffer.toList();
   }
 
   @override

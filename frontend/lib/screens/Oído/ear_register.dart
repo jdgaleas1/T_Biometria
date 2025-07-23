@@ -12,13 +12,13 @@ import 'package:image/image.dart' as img;
 class EarRegister extends StatefulWidget {
   final VoidCallback? onComplete;
   final void Function(List<double>)? onCompleteWithFeatures;
-  final String? email;
+  final String identificador;
 
   const EarRegister({
     super.key,
+    required this.identificador,
     this.onComplete,
     this.onCompleteWithFeatures,
-    this.email,
   });
 
   @override
@@ -70,7 +70,6 @@ class _EarRegisterState extends State<EarRegister> {
       final output = List.generate(1, (_) => List.filled(3, 0.0));
       _interpreter.run(input, output);
       final pred = output[0];
-      print("🔢 Output: $pred");
 
       final maxIndex =
           pred.indexWhere((e) => e == pred.reduce((a, b) => a > b ? a : b));
@@ -124,41 +123,52 @@ class _EarRegisterState extends State<EarRegister> {
       final connectivity = await Connectivity().checkConnectivity();
       final hayInternet = connectivity != ConnectivityResult.none;
 
-      if (widget.email != null) {
-        bool enviado = false;
+      int? idUsuario =
+          await BiometricDBHelper().obtenerIdUsuario(widget.identificador);
 
-        if (hayInternet) {
-          try {
-            await verificarOidoHibrido(
-              features: vectorPromedio,
-              imagenes: capturedImages,
-              email: widget.email!,
-              onResultado: (match, similitud) {
-                print("✅ Enviado al backend correctamente");
-                enviado = true;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(
-                      "✅ Enviado al servidor. Similitud: ${similitud.toStringAsFixed(2)}"),
-                ));
-              },
-            );
-          } catch (e) {
-            print("⚠️ Falló el backend, se guardará localmente: $e");
-          }
-        }
-
-        if (!enviado) {
-          await BiometricDBHelper()
-              .insertTemplate(widget.email!, 'ear', vectorPromedio);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("📥 Registro guardado localmente")),
-          );
-        }
-
-        widget.onComplete?.call();
-        widget.onCompleteWithFeatures?.call(vectorPromedio);
-        Navigator.pop(context);
+      if (idUsuario == null) {
+        throw Exception("Usuario no registrado");
       }
+
+      bool enviado = false;
+
+      if (hayInternet) {
+        try {
+          await verificarOidoHibrido(
+            features: vectorPromedio,
+            imagenes: capturedImages,
+            identificador:
+                widget.identificador, // se usa como ID lógico en backend
+            onResultado: (match, similitud) {
+              print("✅ Enviado al backend correctamente");
+              enviado = true;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(
+                    "✅ Enviado al servidor. Similitud: ${similitud.toStringAsFixed(2)}"),
+              ));
+            },
+          );
+        } catch (e) {
+          print("⚠️ Falló el backend, se guardará localmente: $e");
+        }
+      }
+
+      if (!enviado) {
+        await BiometricDBHelper().insertarCredencialBiometrica(
+          idUsuario: idUsuario,
+          tipoBiometria: 'oido',
+          features: vectorPromedio,
+          versionAlgoritmo: '1.0',
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("📥 Registro guardado localmente")),
+        );
+      }
+
+      widget.onComplete?.call();
+      widget.onCompleteWithFeatures?.call(vectorPromedio);
+      Navigator.pop(context);
     } catch (e) {
       print("❌ Error procesando oído: $e");
       ScaffoldMessenger.of(context).showSnackBar(

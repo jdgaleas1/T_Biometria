@@ -10,22 +10,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
+  final TextEditingController identificadorController = TextEditingController();
   List<String> biometricOptions = ["Voz", "Oído", "Iris", "Rostro", "Palma"];
   List<String> selectedBiometrics = [];
 
   void iniciarVerificacion() async {
-    final email = emailController.text.trim();
+    final identificador = identificadorController.text.trim();
 
-    if (email.isEmpty) {
-      _showSnack("Por favor ingresa tu correo electrónico");
+    if (identificador.isEmpty) {
+      _showSnack("Por favor ingresa tu identificador único (correo o cédula)");
       return;
     }
 
-    final existe = await BiometricDBHelper().existeUsuario(email);
+    final idUsuario = await BiometricDBHelper().obtenerIdUsuario(identificador);
 
-    if (!existe) {
-      _showSnack("❌ Correo no registrado. Por favor regístrate primero.");
+    if (idUsuario == null) {
+      _showSnack(
+          "❌ Identificador no registrado. Por favor regístrate primero.");
       return;
     }
 
@@ -36,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => BiometricVerification(
-          email: email,
+          identificador: identificador,
           selected: selectedBiometrics,
         ),
       ),
@@ -83,8 +84,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              _buildInputField(
-                  emailController, 'Correo Electrónico', 'ejemplo@correo.com'),
+              _buildInputField(identificadorController, 'Identificador único',
+                  'ejemplo@correo.com o Cédula'),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,

@@ -6,9 +6,13 @@ import '../biometric_db_helper.dart';
 
 class PalmRegister extends StatefulWidget {
   final VoidCallback onComplete;
-  final String email;
+  final String identificador;
 
-  PalmRegister({required this.onComplete, required this.email});
+  const PalmRegister({
+    super.key,
+    required this.onComplete,
+    required this.identificador,
+  });
 
   @override
   _PalmRegisterState createState() => _PalmRegisterState();
@@ -25,7 +29,7 @@ class _PalmRegisterState extends State<PalmRegister> {
 
     if (pickedFile != null) {
       final dir = await getApplicationDocumentsDirectory();
-      final filename = 'palm_${widget.email}_${_photoCount + 1}.jpg';
+      final filename = 'palm_${widget.identificador}_${_photoCount + 1}.jpg';
       final newPath = '${dir.path}/$filename';
       final savedFile = await File(pickedFile.path).copy(newPath);
 
@@ -35,10 +39,21 @@ class _PalmRegisterState extends State<PalmRegister> {
       });
 
       if (_photoCount == _maxPhotos) {
-        await BiometricDBHelper().insertTemplate(
-          widget.email,
-          'palm',
-          List.filled(128, 0.0), // Simulación de vector
+        final idUsuario =
+            await BiometricDBHelper().obtenerIdUsuario(widget.identificador);
+
+        if (idUsuario == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("❌ Usuario no encontrado")),
+          );
+          return;
+        }
+
+        await BiometricDBHelper().insertarCredencialBiometrica(
+          idUsuario: idUsuario,
+          tipoBiometria: 'palm',
+          features: List.filled(128, 0.0), // 🔁 Simulación
+          versionAlgoritmo: '1.0',
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -70,8 +85,6 @@ class _PalmRegisterState extends State<PalmRegister> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 10),
-
-            // Ícono ilustrativo
             Container(
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
@@ -82,8 +95,6 @@ class _PalmRegisterState extends State<PalmRegister> {
                   size: 48, color: Colors.white),
             ),
             const SizedBox(height: 16),
-
-            // Instrucción
             Text(
               "Captura ${_photoCount + 1} de $_maxPhotos",
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -95,8 +106,6 @@ class _PalmRegisterState extends State<PalmRegister> {
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             const SizedBox(height: 20),
-
-            // Botón de captura
             ElevatedButton.icon(
               icon: const Icon(Icons.camera_alt_outlined),
               label: Text(faltan > 0
@@ -114,8 +123,6 @@ class _PalmRegisterState extends State<PalmRegister> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Miniaturas de fotos
             if (_capturedPhotos.isNotEmpty)
               SizedBox(
                 height: 100,
@@ -139,10 +146,7 @@ class _PalmRegisterState extends State<PalmRegister> {
                 "Sin fotos aún",
                 style: TextStyle(color: Colors.grey),
               ),
-
             const Spacer(),
-
-            // Indicador de progreso
             LinearProgressIndicator(
               value: _photoCount / _maxPhotos,
               backgroundColor: Colors.grey[300],

@@ -7,10 +7,11 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:math';
 
 class FaceVerify extends StatefulWidget {
-  final String email;
+  final String identificador;
   final VoidCallback onSuccess;
 
-  const FaceVerify({super.key, required this.email, required this.onSuccess});
+  const FaceVerify(
+      {super.key, required this.identificador, required this.onSuccess});
 
   @override
   State<FaceVerify> createState() => _FaceVerifyState();
@@ -74,7 +75,7 @@ class _FaceVerifyState extends State<FaceVerify> {
 
     final newEmbedding = await _getEmbedding(File(pickedFile.path));
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/face_embedding_${widget.email}.txt');
+    final file = File('${dir.path}/face_embedding_${widget.identificador}.txt');
 
     if (!file.existsSync()) {
       setState(() {

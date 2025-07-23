@@ -10,9 +10,9 @@ import 'face_utils.dart';
 
 class FaceRegister extends StatefulWidget {
   final VoidCallback onComplete;
-  final String email;
+  final String identificador;
 
-  FaceRegister({required this.onComplete, required this.email});
+  FaceRegister({required this.identificador, required this.onComplete});
 
   @override
   _FaceRegisterState createState() => _FaceRegisterState();
@@ -106,7 +106,7 @@ class _FaceRegisterState extends State<FaceRegister> {
           promedio[i] /= 3;
         }
 
-        await FaceUtils.guardarEmbedding(widget.email, promedio);
+        await FaceUtils.guardarEmbedding(widget.identificador, promedio);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Rostro guardado correctamente")),

@@ -6,12 +6,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 
 class IrisVerify extends StatefulWidget {
-  final String email;
+  final String identificador;
   final VoidCallback onSuccess;
 
   const IrisVerify({
     super.key,
-    required this.email,
+    required this.identificador,
     required this.onSuccess,
   });
 
@@ -36,7 +36,7 @@ class _IrisVerifyState extends State<IrisVerify> {
     List<double> similitudes = [];
 
     for (int i = 1; i <= 3; i++) {
-      final file = File('${dir.path}/iris_${widget.email}_$i.jpg');
+      final file = File('${dir.path}/iris_${widget.identificador}_$i.jpg');
       if (!file.existsSync()) continue;
 
       final ref = img.decodeImage(await file.readAsBytes());

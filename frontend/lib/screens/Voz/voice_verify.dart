@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'dart:ffi';
-import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'package:flutter/material.dart';
@@ -77,12 +76,12 @@ class VoiceNative {
 }
 
 class VoiceVerify extends StatefulWidget {
-  final String email;
+  final String identificador;
   final VoidCallback onSuccess;
 
   const VoiceVerify({
     super.key,
-    required this.email,
+    required this.identificador,
     required this.onSuccess,
   });
 
@@ -137,8 +136,29 @@ class _VoiceVerifyState extends State<VoiceVerify> {
   Future<void> _verificarMFCC(File file) async {
     try {
       final currentMFCC = VoiceNative.extractMfcc(file.path);
-      final storedMFCC =
-          await BiometricDBHelper().getTemplate(widget.email, 'voice');
+
+      final idUsuario =
+          await BiometricDBHelper().obtenerIdUsuario(widget.identificador);
+      if (idUsuario == null) {
+        setState(() => _result = '❌ Usuario no encontrado');
+        return;
+      }
+
+      final credenciales =
+          await BiometricDBHelper().obtenerCredenciales(idUsuario);
+      final entry = credenciales.firstWhere(
+        (c) => c['tipo_biometria'] == 'voz',
+        orElse: () => {},
+      );
+
+      if (entry.isEmpty) {
+        setState(() => _result = '❌ No hay plantilla de voz registrada');
+        return;
+      }
+
+      final blob = entry['template'] as Uint8List;
+      final storedMFCC = Float64List.view(blob.buffer).toList();
+
       final sim = VoiceNative.comparar(currentMFCC, storedMFCC);
 
       if (sim >= 0.8) {

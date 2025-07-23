@@ -5,9 +5,9 @@ import 'dart:io';
 
 class IrisRegister extends StatefulWidget {
   final VoidCallback onComplete;
-  final String email;
+  final String identificador;
 
-  IrisRegister({required this.onComplete, required this.email});
+  IrisRegister({required this.onComplete, required this.identificador});
 
   @override
   _IrisRegisterState createState() => _IrisRegisterState();
@@ -47,7 +47,7 @@ class _IrisRegisterState extends State<IrisRegister>
     if (pickedFile != null) {
       try {
         final dir = await getApplicationDocumentsDirectory();
-        final filename = 'iris_${widget.email}_${_capturas + 1}.jpg';
+        final filename = 'iris_${widget.identificador}_${_capturas + 1}.jpg';
         final path = '${dir.path}/$filename';
         final savedFile = await File(pickedFile.path).copy(path);
 

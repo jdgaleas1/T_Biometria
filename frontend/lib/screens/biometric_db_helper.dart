@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,155 +26,161 @@ class BiometricDBHelper {
       path,
       version: 1,
       onCreate: (db, version) async {
-        // Tabla de usuarios
         await db.execute('''
           CREATE TABLE usuarios (
-            email TEXT PRIMARY KEY,
+            id_usuario INTEGER PRIMARY KEY,
             nombres TEXT,
             apellidos TEXT,
-            pais TEXT
+            identificador_unico TEXT UNIQUE,
+            estado TEXT
           )
         ''');
 
-        // Tabla de templates biométricos
         await db.execute('''
-          CREATE TABLE biometric_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT,
-            modality TEXT,
-            features TEXT
+          CREATE TABLE credenciales_biometricas (
+            id_credencial INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_usuario INTEGER,
+            tipo_biometria TEXT,
+            template BLOB,
+            validez_hasta TEXT,
+            version_algoritmo TEXT,
+            FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE textos_dinamicos_audio (
+            id_texto INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_usuario INTEGER,
+            frase TEXT,
+            estado_texto TEXT,
+            FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE validaciones_biometricas (
+            id_validacion INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_usuario INTEGER,
+            tipo_biometria TEXT,
+            resultado TEXT,
+            modo_validacion TEXT,
+            timestamp TEXT,
+            ubicacion_gps TEXT,
+            FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE sincronizaciones (
+            id_sync INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_usuario INTEGER,
+            fecha_ultima_sync TEXT,
+            tipo_sync TEXT,
+            estado_sync TEXT,
+            cantidad_items INTEGER,
+            FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
           )
         ''');
       },
     );
   }
 
-  // ✅ Insertar datos completos de usuario + templates
-  Future<void> insertarUsuarioCompleto({
-    required String email,
+  /// ✅ Inserta un nuevo usuario
+  Future<int> insertarUsuario({
     required String nombres,
     required String apellidos,
-    required String pais,
-    required Map<String, List<double>> templates,
+    required String identificadorUnico,
+    String estado = 'activo',
   }) async {
     final db = await database;
-
-    await db.insert(
-        'usuarios',
-        {
-          'email': email,
-          'nombres': nombres,
-          'apellidos': apellidos,
-          'pais': pais,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace);
-
-    for (var modalidad in templates.keys) {
-      final valores = jsonEncode(templates[modalidad]);
-      await db.insert('biometric_templates', {
-        'email': email,
-        'modality':
-            modalidad.trim().toLowerCase(), // 👈 aseguramos formato uniforme
-        'features': valores,
-      });
-    }
-
-    print("✅ Usuario $email guardado con sus biometrías");
+    return await db.insert('usuarios', {
+      'nombres': nombres,
+      'apellidos': apellidos,
+      'identificador_unico': identificadorUnico,
+      'estado': estado,
+    });
   }
 
-  // ✅ Insertar un solo template biométrico
-  Future<void> insertTemplate(
-      String email, String modality, List<double> features) async {
+  /// ✅ Obtener ID por identificador único
+  Future<int?> obtenerIdUsuario(String identificadorUnico) async {
     final db = await database;
-    await db.insert(
-      'biometric_templates',
-      {
-        'email': email,
-        'modality':
-            modality.trim().toLowerCase(), // 👈 aseguramos formato uniforme
-        'features': jsonEncode(features),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-
-    print("✅ Inserted template for $email modality: $modality");
-  }
-
-  // ✅ Obtener un solo template biométrico
-  Future<List<double>> getTemplate(String email, String modality) async {
-    final db = await database;
-    final result = await db.query(
-      'biometric_templates',
-      where: 'email = ? AND modality = ?',
-      whereArgs: [email, modality],
-    );
-
-    if (result.isNotEmpty) {
-      final jsonList = jsonDecode(result.first['features'] as String);
-      return (jsonList as List<dynamic>)
-          .map((e) => (e as num).toDouble())
-          .toList();
-    } else {
-      throw Exception('No template found for $email modality: $modality');
-    }
-  }
-
-  // ✅ Eliminar un template
-  Future<void> deleteTemplate(String email, String modality) async {
-    final db = await database;
-    await db.delete(
-      'biometric_templates',
-      where: 'email = ? AND modality = ?',
-      whereArgs: [email, modality],
-    );
-    print("🗑️ Deleted template for $email modality: $modality");
-  }
-
-  // ✅ Verificar si un usuario existe
-  Future<bool> existeUsuario(String email) async {
-    final db = await database;
-    final result = await db.query(
+    final res = await db.query(
       'usuarios',
-      where: 'email = ?',
-      whereArgs: [email],
+      where: 'identificador_unico = ?',
+      whereArgs: [identificadorUnico],
+    );
+    if (res.isEmpty) return null;
+    return res.first['id_usuario'] as int;
+  }
+
+  /// ✅ Obtener perfil por identificador único
+  Future<Map<String, dynamic>> obtenerPerfil(String identificadorUnico) async {
+    final db = await database;
+    final res = await db.query(
+      'usuarios',
+      where: 'identificador_unico = ?',
+      whereArgs: [identificadorUnico],
       limit: 1,
     );
-    return result.isNotEmpty;
-  }
-
-  // ✅ Obtener perfil completo de usuario
-  Future<Map<String, dynamic>> obtenerPerfil(String email) async {
-    final db = await database;
-
-    final usuario =
-        await db.query('usuarios', where: 'email = ?', whereArgs: [email]);
-
-    final templates = await db
-        .query('biometric_templates', where: 'email = ?', whereArgs: [email]);
-
-    if (usuario.isEmpty) {
-      throw Exception("❌ Usuario no encontrado en BD: $email");
+    if (res.isEmpty) {
+      throw Exception("Usuario no encontrado: $identificadorUnico");
     }
-
-    return {
-      'email': email,
-      'nombres': usuario.first['nombres'],
-      'apellidos': usuario.first['apellidos'],
-      'pais': usuario.first['pais'],
-      'modalidades': templates
-          .map((e) => (e['modality'] as String).trim().toLowerCase())
-          .toSet()
-          .toList(), // 🔁 elimina duplicados si existen
-    };
+    return res.first;
   }
 
+  /// ✅ Insertar credencial biométrica
+  Future<void> insertarCredencialBiometrica({
+    required int idUsuario,
+    required String tipoBiometria,
+    required List<double> features,
+    required String versionAlgoritmo,
+    String? validezHasta,
+  }) async {
+    final db = await database;
+    final blob = Float64List.fromList(features).buffer.asUint8List();
+
+    await db.insert('credenciales_biometricas', {
+      'id_usuario': idUsuario,
+      'tipo_biometria': tipoBiometria,
+      'template': blob,
+      'validez_hasta': validezHasta ?? '',
+      'version_algoritmo': versionAlgoritmo,
+    });
+  }
+
+  /// ✅ Obtener todas las credenciales de un usuario
+  Future<List<Map<String, dynamic>>> obtenerCredenciales(int idUsuario) async {
+    final db = await database;
+    return await db.query(
+      'credenciales_biometricas',
+      where: 'id_usuario = ?',
+      whereArgs: [idUsuario],
+    );
+  }
+
+  /// ✅ Insertar frase dinámica de voz
+  Future<void> insertarTextoDinamico({
+    required int idUsuario,
+    required String frase,
+    String estadoTexto = 'activo',
+  }) async {
+    final db = await database;
+    await db.insert('textos_dinamicos_audio', {
+      'id_usuario': idUsuario,
+      'frase': frase,
+      'estado_texto': estadoTexto,
+    });
+  }
+
+  /// ✅ Eliminar la base de datos completa (para pruebas)
   Future<void> dropTables() async {
     final db = await database;
-    await db.close(); // 🔁 cerrar primero
+    await db.close();
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'biometric_templates.db');
-    await deleteDatabase(path); // 🗑️ elimina el archivo real
+    await deleteDatabase(path);
     print("🗑️ Base de datos eliminada completamente");
-    _db = null; // importante para forzar reinit
+    _db = null;
   }
 }

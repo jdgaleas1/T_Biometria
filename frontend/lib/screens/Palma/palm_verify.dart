@@ -6,10 +6,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 
 class PalmVerify extends StatefulWidget {
-  final String email;
+  final String identificador;
   final VoidCallback onSuccess;
 
-  const PalmVerify({super.key, required this.email, required this.onSuccess});
+  const PalmVerify(
+      {super.key, required this.identificador, required this.onSuccess});
 
   @override
   State<PalmVerify> createState() => _PalmVerifyState();
@@ -33,7 +34,7 @@ class _PalmVerifyState extends State<PalmVerify> {
     List<double> similitudes = [];
 
     for (int i = 1; i <= 5; i++) {
-      final file = File('${dir.path}/palm_${widget.email}_$i.jpg');
+      final file = File('${dir.path}/palm_${widget.identificador}_$i.jpg');
       if (!file.existsSync()) continue;
 
       final ref = img.decodeImage(await file.readAsBytes());

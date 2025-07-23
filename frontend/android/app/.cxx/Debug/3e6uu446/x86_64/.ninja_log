@@ -1,12 +1,9 @@
 # ninja log v5
+11	517	7747326157521558	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libear_comparator.so	1ad04cb018f04e9e
 1	64	7743397338363219	CMakeFiles/ear_comparator.dir/compare_ear_features.c.o	36094ee1f545d2cb
+66	532	7747326157541565	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libvoice_mfcc.so	369c09a05d8f514a
 7	77	7743397338450115	CMakeFiles/voice_comparator.dir/compare_voice_features.c.o	655290196683e34d
+34	518	7747326157521558	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libvoice_comparator.so	f5413ebdd26ea533
 23	99	7743397338752783	CMakeFiles/voice_mfcc.dir/libmfcc.c.o	a867ad1c0553bda0
 18	118	7743397338830578	CMakeFiles/voice_mfcc.dir/extract_mfcc.c.o	200858cbbbe42cbb
 12	129	7743397338952350	CMakeFiles/voice_mfcc.dir/mfcc.c.o	beda67e07e16fcab
-65	197	7743397339823667	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libear_comparator.so	1ad04cb018f04e9e
-78	197	7743397339823667	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libvoice_comparator.so	f5413ebdd26ea533
-129	219	7743397340026138	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libvoice_mfcc.so	369c09a05d8f514a
-11	517	7747326157521558	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libear_comparator.so	1ad04cb018f04e9e
-34	518	7747326157521558	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libvoice_comparator.so	f5413ebdd26ea533
-66	532	7747326157541565	C:/Users/User/Documents/Tesis/T_Biometria/frontend/build/app/intermediates/cxx/Debug/3e6uu446/obj/x86_64/libvoice_mfcc.so	369c09a05d8f514a
