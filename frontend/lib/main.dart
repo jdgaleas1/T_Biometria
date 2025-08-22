@@ -13,8 +13,8 @@ import 'package:camera/camera.dart';
 import 'screens/biometric_db_helper.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await BiometricDBHelper().dropTables();
+  //WidgetsFlutterBinding.ensureInitialized();
+  //await BiometricDBHelper().dropTables();
   runApp(BiometriaApp());
 }
 

@@ -14,7 +14,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final List<bool> completado = [false, false, false, false, false];
+  final List<bool> completado = [false, false];
 
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController apellidoController = TextEditingController();
@@ -72,33 +72,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final modalities = ['Oído', 'Rostro', 'Palma', 'Iris', 'Voz'];
+    final modalities = ['Oído', 'Voz'];
     final icons = [
       Icons.hearing,
-      Icons.face,
-      Icons.front_hand,
-      Icons.remove_red_eye,
       Icons.record_voice_over,
     ];
     final screens = [
       () => EarRegister(
           onComplete: () => updateState(0),
           identificador: identificadorController.text),
-      () => FaceRegister(
-          onComplete: () => updateState(1),
-          identificador: identificadorController.text),
-      () => PalmRegister(
-          onComplete: () => updateState(2),
-          identificador: identificadorController.text),
-      () => IrisRegister(
-          onComplete: () => updateState(3),
-          identificador: identificadorController.text),
       () => VoiceRegister(
-          onComplete: () => updateState(4),
+          onComplete: () => updateState(1),
           identificador: identificadorController.text),
     ];
 
-    double progress = completado.where((e) => e).length / 5;
+    double progress = completado.where((e) => e).length / completado.length;
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -143,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                children: List.generate(5, (i) {
+                children: List.generate(modalities.length, (i) {
                   bool isCompleted = completado[i];
                   return SizedBox(
                     width: MediaQuery.of(context).size.width / 2 - 28,

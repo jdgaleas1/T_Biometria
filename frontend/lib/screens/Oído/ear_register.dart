@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -106,8 +107,17 @@ class _EarRegisterState extends State<EarRegister> {
     }
   }
 
+  Future<bool> _tieneConexionReal() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _procesarYConfirmar() async {
-    if (capturedImages.length < 7) return;
+    if (capturedImages.length < 1) return;
     setState(() => _procesando = true);
 
     try {
@@ -120,9 +130,7 @@ class _EarRegisterState extends State<EarRegister> {
 
       final vectorPromedio =
           EarFeatureExtractorSimple.promediarVectores(allFeatures);
-      final connectivity = await Connectivity().checkConnectivity();
-      final hayInternet = connectivity != ConnectivityResult.none;
-
+      final hayInternet = await _tieneConexionReal();
       int? idUsuario =
           await BiometricDBHelper().obtenerIdUsuario(widget.identificador);
 
@@ -134,20 +142,31 @@ class _EarRegisterState extends State<EarRegister> {
 
       if (hayInternet) {
         try {
+          final completer = Completer<void>();
+
           await verificarOidoHibrido(
             features: vectorPromedio,
             imagenes: capturedImages,
-            identificador:
-                widget.identificador, // se usa como ID lógico en backend
+            identificador: widget.identificador,
             onResultado: (match, similitud) {
-              print("✅ Enviado al backend correctamente");
-              enviado = true;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
-                    "✅ Enviado al servidor. Similitud: ${similitud.toStringAsFixed(2)}"),
-              ));
+              if (!enviado) {
+                enviado = true;
+                completer.complete();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("✅ Enviado al servidor")),
+                );
+              }
             },
           );
+
+          // Espera la respuesta máximo 3 segundos
+          await completer.future.timeout(const Duration(seconds: 3));
+
+          if (!completer.isCompleted) {
+            completer.complete(); // fuerza completado si quedó colgado
+          }
+        } on TimeoutException {
+          print("⏱️ Tiempo de espera agotado, se usará extracción local");
         } catch (e) {
           print("⚠️ Falló el backend, se guardará localmente: $e");
         }
@@ -181,7 +200,7 @@ class _EarRegisterState extends State<EarRegister> {
 
   @override
   Widget build(BuildContext context) {
-    final restantes = 7 - capturedImages.length;
+    final restantes = 1 - capturedImages.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -249,7 +268,7 @@ class _EarRegisterState extends State<EarRegister> {
                     ElevatedButton.icon(
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text('Confirmar Registro'),
-                      onPressed: capturedImages.length == 7
+                      onPressed: capturedImages.length == 1
                           ? _procesarYConfirmar
                           : null,
                       style: ElevatedButton.styleFrom(

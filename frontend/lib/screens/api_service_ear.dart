@@ -18,21 +18,25 @@ Future<void> verificarOidoHibrido({
 
   if (connectivityResult != ConnectivityResult.none) {
     try {
-      final uri = Uri.parse('http://192.168.100.98:8080//oreja/autenticar');
+      final uri = Uri.parse('http://192.168.100.98:8080/oreja/registrar');
       final request = http.MultipartRequest('POST', uri);
 
       for (int i = 0; i < imagenes.length; i++) {
+        final nombreCampo = 'img_$i';
+        final nombreArchivo = '$nombreCampo.jpg';
+
         request.files.add(await http.MultipartFile.fromPath(
-          'img_$i',
+          nombreCampo,
           imagenes[i].path,
-          filename: basename(imagenes[i].path),
+          filename: nombreArchivo,
           contentType: MediaType('image', 'jpeg'),
         ));
       }
 
-      final response = await request.send();
+      final response = await request.send().timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 200) {
+        {}
         print('🌐 [Remoto] Registro enviado correctamente');
         enviadoRemotamente = true;
         onResultado(true, 1.0); // Similitud máxima (simulada)
