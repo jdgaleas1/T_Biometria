@@ -77,6 +77,8 @@ class _VoiceRegisterState extends State<VoiceRegister> {
   final List<int> _pcmData = [];
   bool _isRecording = false;
   String? _audioPath;
+  List<File> audiosGrabados = []; // ✅ <--- aquí
+
   final TextEditingController _emailController = TextEditingController();
 
   final int sampleRate = 16000;
@@ -163,8 +165,12 @@ class _VoiceRegisterState extends State<VoiceRegister> {
         const SnackBar(content: Text('Grabación demasiado corta o vacía')),
       );
     } else {
+      setState(() {
+        audiosGrabados.add(file); // ✅ Esto actualiza la interfaz correctamente
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Grabación guardada correctamente')),
+        SnackBar(
+            content: Text('🎧 Grabación ${audiosGrabados.length} guardada')),
       );
     }
   }
@@ -222,98 +228,53 @@ class _VoiceRegisterState extends State<VoiceRegister> {
 
   String get email => widget.identificador ?? _emailController.text.trim();
 
-  Future<void> _enviarGrabacion() async {
-    if (_audioPath == null || email.isEmpty) {
+  Future<void> _guardarMultiplesAudios() async {
+    if (audiosGrabados.length < 1 || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Falta grabación o correo')),
+        const SnackBar(content: Text('Faltan grabaciones o identificador')),
       );
       return;
     }
 
-    final archivo = File(_audioPath!);
+    try {
+      final mfccs = <List<double>>[];
 
-    if (widget.isVerification) {
-      await enviarVoz(
-        archivo,
-        email,
-        onResultado: (bool match, double similitud) {
-          if (match) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('✅ Verificación exitosa ($similitud)')),
-            );
-            widget.onCompleteWithFeatures
-                ?.call(List.generate(13, (i) => i * 1.1)); // simulación
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('❌ Voz no coincide ($similitud)')),
-            );
-          }
-        },
+      for (var file in audiosGrabados) {
+        mfccs.add(VoiceNative.extractMfcc(file.path));
+      }
+
+      final vectorPromedio = List<double>.filled(mfccs.first.length, 0.0);
+      for (var i = 0; i < vectorPromedio.length; i++) {
+        for (var vec in mfccs) {
+          vectorPromedio[i] += vec[i];
+        }
+        vectorPromedio[i] /= mfccs.length;
+      }
+
+      final idUsuario = await BiometricDBHelper().obtenerIdUsuario(email);
+      if (idUsuario == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("❌ Usuario no encontrado")),
+        );
+        return;
+      }
+
+      await BiometricDBHelper().insertarCredencialBiometrica(
+        idUsuario: idUsuario,
+        tipoBiometria: 'voz',
+        features: vectorPromedio,
+        versionAlgoritmo: '1.0',
       );
-    } else {
-      bool enviado = false;
 
-      if (_tieneInternet) {
-        final completer = Completer<bool>();
-
-        try {
-          await enviarVoz(
-            archivo,
-            email,
-            onResultado: (bool match, double similitud) async {
-              print('🛰️ Resultado recibido del backend');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('✅ Registro exitoso ($similitud)')),
-              );
-              enviado = true;
-              widget.onComplete?.call();
-              completer.complete(true);
-            },
-          );
-
-          // Esperamos resultado o timeout
-          await completer.future.timeout(
-            const Duration(seconds: 5),
-            onTimeout: () {
-              print('⚠️ Backend no respondió a tiempo');
-              completer.complete(false); // desbloquear
-              return false;
-            },
-          );
-        } catch (e) {
-          print('❌ Excepción al enviar al backend: $e');
-          enviado = false;
-        }
-      }
-
-      if (!enviado) {
-        print('📥 Guardando localmente porque no se pudo enviar');
-        try {
-          final List<double> mfcc = VoiceNative.extractMfcc(_audioPath!);
-          final idUsuario = await BiometricDBHelper().obtenerIdUsuario(email);
-          if (idUsuario == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("❌ Usuario no encontrado")),
-            );
-            return;
-          }
-          await BiometricDBHelper().insertarCredencialBiometrica(
-            idUsuario: idUsuario,
-            tipoBiometria: 'voz',
-            features: mfcc,
-            versionAlgoritmo: '1.0',
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('📥 Guardado localmente')),
-          );
-          widget.onComplete?.call();
-        } catch (e) {
-          print('❌ Error guardando localmente: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error procesando MFCC')),
-          );
-        }
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Audios guardados correctamente')),
+      );
+      widget.onComplete?.call();
+    } catch (e) {
+      print('❌ Error procesando MFCCs: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Error procesando MFCCs')),
+      );
     }
   }
 
@@ -399,6 +360,24 @@ class _VoiceRegisterState extends State<VoiceRegister> {
                                 borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(6, (i) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(
+                                i < audiosGrabados.length
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                color: i < audiosGrabados.length
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                            );
+                          }),
+                        ),
                       ],
                     ),
                   ),
@@ -418,21 +397,26 @@ class _VoiceRegisterState extends State<VoiceRegister> {
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 12),
-                        if (_tieneInternet)
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.cloud_upload),
-                            label: Text(widget.isVerification
-                                ? 'Verificar Voz'
-                                : 'Guardar grabación'),
-                            onPressed: _enviarGrabacion,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14, horizontal: 20),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                          )
+                        if (_tieneInternet && !widget.isVerification)
+                          (audiosGrabados.length == 1
+                              ? ElevatedButton.icon(
+                                  icon: const Icon(Icons.cloud_upload),
+                                  label:
+                                      const Text('Guardar las 1 grabaciones'),
+                                  onPressed: _guardarMultiplesAudios,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14, horizontal: 20),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  "Grabaciones completadas: ${audiosGrabados.length}/1",
+                                  style: const TextStyle(color: Colors.grey),
+                                ))
                         else if (!widget.isVerification)
                           ElevatedButton.icon(
                             icon: const Icon(Icons.save_alt),

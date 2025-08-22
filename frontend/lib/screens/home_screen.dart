@@ -1,11 +1,34 @@
-// ✅ HomeScreen mejorado con datos del usuario desde la BD
+// ✅ HomeScreen mejorado con sincronización automática
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'biometric_db_helper.dart';
+import 'sync_manager.dart'; // asegúrate de tener este archivo
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final String nombreUsuario; // este es el email
 
   const HomeScreen({super.key, required this.nombreUsuario});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    revisarYSincronizar();
+  }
+
+  Future<void> revisarYSincronizar() async {
+    final resultado = await Connectivity().checkConnectivity();
+    if (resultado != ConnectivityResult.none) {
+      print("🔄 Conexión detectada, lanzando sincronización...");
+      await SyncManager().iniciar();
+    } else {
+      print("❌ Sin conexión, no se puede sincronizar.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +47,7 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
-        future: BiometricDBHelper().obtenerPerfil(nombreUsuario),
+        future: BiometricDBHelper().obtenerPerfil(widget.nombreUsuario),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -50,17 +73,20 @@ class HomeScreen extends StatelessWidget {
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 10),
-                ...List.generate(user['modalidades'].length, (i) {
-                  final modalidad = user['modalidades'][i];
-                  return Row(
-                    children: [
-                      const Icon(Icons.check_circle,
-                          color: Colors.teal, size: 20),
-                      const SizedBox(width: 8),
-                      Text(modalidad)
-                    ],
-                  );
-                }),
+                if (user['modalidades'] != null && user['modalidades'] is List)
+                  ...List.generate(user['modalidades'].length, (i) {
+                    final modalidad = user['modalidades'][i];
+                    return Row(
+                      children: [
+                        const Icon(Icons.check_circle,
+                            color: Colors.teal, size: 20),
+                        const SizedBox(width: 8),
+                        Text(modalidad)
+                      ],
+                    );
+                  })
+                else
+                  const Text("❗ No se encontraron modalidades biométricas"),
               ],
             ),
           );

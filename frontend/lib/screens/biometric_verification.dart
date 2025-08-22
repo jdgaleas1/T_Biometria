@@ -249,7 +249,9 @@ class _BiometricVerificationState extends State<BiometricVerification> {
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: widget.selected.map((mod) {
+              children: widget.selected
+                  .where((mod) => mod == 'Voz' || mod == 'Oído')
+                  .map((mod) {
                 return ElevatedButton.icon(
                   onPressed: () => navigateTo(mod),
                   icon: const Icon(Icons.verified_user),
